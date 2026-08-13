@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Checklist de Veículos — Piratruck</title>
+<style>
+:root{
+  --bg:#0f172a; --bg2:#111827; --panel:#ffffff; --panel-soft:#f8fafc;
+  --border:#e2e8f0; --text:#1e293b; --text-soft:#64748b;
+  --brand:#1d4ed8; --brand-dark:#1e3a8a; --brand-soft:#dbeafe;
+  --ok:#16a34a; --ok-soft:#dcfce7; --bad:#dc2626; --bad-soft:#fee2e2;
+  --warn:#d97706; --warn-soft:#fef3c7; --na:#64748b; --na-soft:#e2e8f0;
+  --radius:12px; --shadow:0 1px 3px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.06);
+  --shadow-lg:0 10px 25px rgba(15,23,42,.12);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+  background:var(--panel-soft); color:var(--text); font-size:14.5px; line-height:1.45;
+}
+h1,h2,h3,h4{margin:0 0 8px 0; font-weight:700; color:#0f172a}
+a{color:var(--brand)}
+button{font-family:inherit; cursor:pointer}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:6px}
+
+/* ===== Header ===== */
+#app-header{
+  background:linear-gradient(135deg,var(--brand-dark),var(--brand));
+  color:#fff; padding:14px 20px; display:flex; align-items:center; gap:16px;
+  position:sticky; top:0; z-index:50; box-shadow:var(--shadow-lg);
+  flex-wrap:wrap;
+}
+#app-header .brand{display:flex; align-items:center; gap:10px; font-weight:800; font-size:18px}
+#app-header .brand .logo{
+  width:34px;height:34px;border-radius:9px;background:#fff;color:var(--brand-dark);
+  display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;
+}
+#app-header .sub{font-size:11.5px; opacity:.85; font-weight:500}
+#status-badge{
+  margin-left:auto; display:flex; align-items:center; gap:8px; font-size:12.5px;
+  background:rgba(255,255,255,.12); padding:6px 12px; border-radius:20px; font-weight:600;
+}
+#status-badge .dot{width:9px;height:9px;border-radius:50%}
+.dot-red{background:#f87171; box-shadow:0 0 0 3px rgba(248,113,113,.3)}
+.dot-green{background:#4ade80; box-shadow:0 0 0 3px rgba(74,222,128,.35)}
+.user-chip{
+  background:rgba(255,255,255,.12); padding:6px 12px; border-radius:20px; font-size:12.5px;
+  display:flex; align-items:center; gap:6px; font-weight:600;
+}
+.user-chip input{
+  background:transparent;border:none;color:#fff;font-weight:600;font-size:12.5px;width:120px;
+  outline:none;
+}
+.user-chip input::placeholder{color:rgba(255,255,255,.7)}
+
+/* ===== Tabs ===== */
+#tab-nav{
+  display:flex; gap:4px; background:#0b1220; padding:0 14px; overflow-x:auto;
+  position:sticky; top:64px; z-index:40; box-shadow:0 2px 6px rgba(0,0,0,.15);
+}
+#tab-nav button{
+  background:transparent; border:none; color:#94a3b8; padding:13px 16px; font-size:13.5px;
+  font-weight:600; border-bottom:3px solid transparent; white-space:nowrap; transition:.15s;
+}
+#tab-nav button:hover{color:#fff}
+#tab-nav button.active{color:#fff; border-bottom-color:#60a5fa}
+
+main{max-width:1180px; margin:0 auto; padding:20px 16px 80px}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* ===== Cards / sections ===== */
+.card{
+  background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+  padding:18px 20px; margin-bottom:16px; box-shadow:var(--shadow);
+}
+.card h2{font-size:17px; display:flex; align-items:center; gap:8px}
+.card h2 .badge{
+  font-size:11px; background:var(--brand-soft); color:var(--brand-dark); padding:3px 9px;
+  border-radius:20px; font-weight:700;
+}
+.section-title{
+  font-size:12.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-soft);
+  font-weight:800; margin:22px 0 10px; padding-top:14px; border-top:1px dashed var(--border);
+}
+.section-title:first-of-type{border-top:none; margin-top:4px; padding-top:0}
+.hint{color:var(--text-soft); font-size:12.5px; margin-top:4px}
+
+/* ===== Form grid ===== */
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px 14px}
+.grid.cols-2{grid-template-columns:repeat(2,1fr)}
+.grid.cols-3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:640px){.grid.cols-2,.grid.cols-3{grid-template-columns:1fr}}
+.field{display:flex; flex-direction:column; gap:5px}
+.field.span-2{grid-column:span 2}
+.field.span-3{grid-column:span 3}
+.field.full{grid-column:1/-1}
+@media(max-width:640px){.field.span-2,.field.span-3{grid-column:span 1}}
+label{font-size:12.5px; font-weight:700; color:#334155}
+label .req{color:var(--bad); margin-left:2px}
+input[type=text],input[type=number],input[type=date],input[type=datetime-local],
+input[type=tel],input[type=password],select,textarea{
+  border:1.5px solid var(--border); border-radius:8px; padding:9px 10px; font-size:13.5px;
+  font-family:inherit; background:#fff; color:var(--text); width:100%; transition:.12s;
+}
+textarea{resize:vertical; min-height:64px}
+input:focus,select:focus,textarea:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px var(--brand-soft)}
+input.err,select.err,textarea.err{border-color:var(--bad); background:var(--bad-soft)}
+.err-msg{color:var(--bad); font-size:11.5px; font-weight:600; display:none}
+.err-msg.show{display:block}
+.radio-row{display:flex; gap:14px; flex-wrap:wrap; padding-top:4px}
+.radio-row label{display:flex; align-items:center; gap:6px; font-weight:600; cursor:pointer}
+.radio-row input{width:auto}
+
+/* ===== Buttons ===== */
+.btn{
+  border:1.5px solid var(--border); background:#fff; color:var(--text); padding:9px 16px;
+  border-radius:8px; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px;
+  transition:.12s;
+}
+.btn:hover{background:#f1f5f9}
+.btn-primary{background:var(--brand); border-color:var(--brand); color:#fff}
+.btn-primary:hover{background:var(--brand-dark)}
+.btn-danger{background:#fff; border-color:var(--bad); color:var(--bad)}
+.btn-danger:hover{background:var(--bad-soft)}
+.btn-ghost{border-color:transparent; background:transparent}
+.btn-ghost:hover{background:#f1f5f9}
+.btn-sm{padding:6px 11px; font-size:12px}
+.btn:disabled{opacity:.5; cursor:not-allowed}
+.btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px}
+
+/* ===== Checklist table ===== */
+.checklist-table{width:100%; border-collapse:collapse; margin-top:6px}
+.checklist-table th{
+  text-align:left; font-size:11px; text-transform:uppercase; color:var(--text-soft);
+  padding:6px 8px; border-bottom:2px solid var(--border);
+}
+.checklist-table td{padding:9px 8px; border-bottom:1px solid #f1f5f9; vertical-align:top}
+.checklist-table tr:hover{background:#fafcff}
+.checklist-item-name{font-size:13px; font-weight:600; max-width:340px}
+.status-group{display:flex; gap:4px}
+.status-btn{
+  border:1.5px solid var(--border); background:#fff; padding:5px 10px; border-radius:7px;
+  font-size:11.5px; font-weight:800; color:var(--text-soft); min-width:44px;
+}
+.status-btn.ok.sel{background:var(--ok); border-color:var(--ok); color:#fff}
+.status-btn.bad.sel{background:var(--bad); border-color:var(--bad); color:#fff}
+.status-btn.na.sel{background:var(--na); border-color:var(--na); color:#fff}
+.checklist-obs{min-width:170px}
+.checklist-obs input{padding:6px 8px; font-size:12.5px}
+.checklist-progress{
+  font-size:12px; font-weight:700; color:var(--text-soft); margin:6px 0 2px;
+}
+
+/* ===== Photos ===== */
+.photo-drop{
+  border:2px dashed var(--border); border-radius:10px; padding:16px; text-align:center;
+  background:#fafcff; cursor:pointer; transition:.12s;
+}
+.photo-drop:hover{border-color:var(--brand); background:var(--brand-soft)}
+.photo-drop input{display:none}
+.photo-grid{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+.photo-thumb{position:relative; width:96px; height:96px; border-radius:8px; overflow:hidden; border:1px solid var(--border)}
+.photo-thumb img{width:100%; height:100%; object-fit:cover; display:block}
+.photo-thumb .rm{
+  position:absolute; top:3px; right:3px; background:rgba(15,23,42,.75); color:#fff; border:none;
+  width:20px; height:20px; border-radius:50%; font-size:12px; line-height:1;
+}
+.photo-thumb .cap{
+  position:absolute; bottom:0; left:0; right:0; background:rgba(15,23,42,.65); color:#fff;
+  font-size:9px; padding:2px 4px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* ===== Alerts / banners ===== */
+.banner{
+  border-radius:10px; padding:12px 16px; font-size:13px; font-weight:600; margin-bottom:16px;
+  display:flex; gap:10px; align-items:flex-start;
+}
+.banner-warn{background:var(--warn-soft); color:#92400e; border:1px solid #fde68a}
+.banner-ok{background:var(--ok-soft); color:#14532d; border:1px solid #86efac}
+.banner-info{background:var(--brand-soft); color:var(--brand-dark); border:1px solid #bfdbfe}
+.banner-danger{background:var(--bad-soft); color:#7f1d1d; border:1px solid #fecaca}
+
+/* ===== Vehicle type picker ===== */
+.type-picker{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; margin-top:6px}
+.type-card{
+  border:1.5px solid var(--border); border-radius:9px; padding:10px 12px; cursor:pointer;
+  font-size:12.5px; font-weight:700; text-align:center; background:#fff; transition:.12s;
+}
+.type-card:hover{border-color:var(--brand); background:var(--brand-soft)}
+.type-card.sel{background:var(--brand); border-color:var(--brand); color:#fff}
+
+/* ===== History list ===== */
+.day-group{margin-bottom:22px}
+.day-heading{
+  display:flex; align-items:center; gap:10px; font-weight:800; font-size:14px; color:var(--brand-dark);
+  margin-bottom:10px; padding-bottom:6px; border-bottom:2px solid var(--border);
+}
+.day-heading .count{
+  background:var(--brand-soft); color:var(--brand-dark); font-size:11px; padding:2px 9px; border-radius:20px;
+}
+.record-card{
+  border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:9px; background:#fff;
+  display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; cursor:pointer;
+  transition:.12s;
+}
+.record-card:hover{border-color:var(--brand); box-shadow:var(--shadow)}
+.record-card .rc-main{display:flex; flex-direction:column; gap:3px}
+.record-card .rc-tag{
+  font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em;
+  padding:2px 8px; border-radius:20px; display:inline-block; width:fit-content;
+}
+.tag-compra{background:#dbeafe; color:#1e40af}
+.tag-manutencao{background:#fef3c7; color:#92400e}
+.tag-empresa{background:#dcfce7; color:#166534}
+.tag-prevenda{background:#ede9fe; color:#5b21b6}
+.record-card .rc-title{font-weight:700; font-size:13.5px}
+.record-card .rc-sub{font-size:11.5px; color:var(--text-soft)}
+.record-card .rc-status{font-size:11px; font-weight:800; padding:3px 10px; border-radius:20px}
+.status-aberto{background:var(--warn-soft); color:#92400e}
+.status-concluido{background:var(--ok-soft); color:#166534}
+.filters-bar{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
+.filters-bar .field{min-width:150px; flex:1}
+.empty-state{text-align:center; padding:50px 20px; color:var(--text-soft)}
+.empty-state .big{font-size:38px; margin-bottom:8px}
+
+/* ===== Modal ===== */
+.modal-overlay{
+  display:none; position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:100;
+  align-items:flex-start; justify-content:center; padding:30px 14px; overflow-y:auto;
+}
+.modal-overlay.open{display:flex}
+.modal-box{
+  background:#fff; border-radius:14px; max-width:760px; width:100%; box-shadow:var(--shadow-lg);
+  animation:pop .12s ease-out;
+}
+@keyframes pop{from{transform:scale(.97); opacity:0} to{transform:scale(1); opacity:1}}
+.modal-head{
+  display:flex; justify-content:space-between; align-items:center; padding:16px 20px;
+  border-bottom:1px solid var(--border); position:sticky; top:0; background:#fff; border-radius:14px 14px 0 0;
+}
+.modal-head h3{margin:0; font-size:16px}
+.modal-close{background:none; border:none; font-size:22px; color:var(--text-soft); line-height:1}
+.modal-body{padding:18px 20px}
+.modal-foot{padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap}
+
+.detail-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px 16px; margin-bottom:14px}
+.detail-item .k{font-size:10.5px; text-transform:uppercase; color:var(--text-soft); font-weight:800}
+.detail-item .v{font-size:13.5px; font-weight:600; margin-top:2px}
+.timeline{border-left:2px solid var(--border); padding-left:16px; margin-left:6px}
+.timeline-entry{position:relative; padding-bottom:16px}
+.timeline-entry::before{content:''; position:absolute; left:-21px; top:3px; width:10px; height:10px; border-radius:50%; background:var(--brand)}
+.timeline-entry .te-head{font-size:12.5px; font-weight:800}
+.timeline-entry .te-date{font-size:11px; color:var(--text-soft); font-weight:600}
+.timeline-entry .te-body{font-size:13px; margin-top:3px; white-space:pre-wrap}
+
+/* ===== Settings ===== */
+.code-block{
+  background:#0f172a; color:#e2e8f0; padding:14px 16px; border-radius:8px; font-size:12px;
+  overflow-x:auto; font-family:Consolas,Menlo,monospace; line-height:1.6;
+}
+.steps{padding-left:20px; font-size:13px}
+.steps li{margin-bottom:8px}
+.link-box{
+  display:flex; gap:8px; align-items:center; background:var(--panel-soft); border:1px solid var(--border);
+  border-radius:8px; padding:8px 10px; margin-top:8px;
+}
+.link-box input{border:none; background:transparent; font-size:12px; color:var(--text-soft); flex:1}
+
+/* ===== Print ===== */
+#print-area{display:none}
+@media print{
+  #app-header,#tab-nav,.no-print,.modal-overlay .modal-foot{display:none !important}
+  body *{visibility:hidden}
+  #print-area, #print-area *{visibility:visible}
+  #print-area{display:block !important; position:absolute; left:0; top:0; width:100%}
+  .print-page{page-break-after:always; padding:14px}
+  .print-page:last-child{page-break-after:auto}
+}
+.print-page{font-family:Arial,sans-serif; color:#111}
+.print-page h1{font-size:18px; border-bottom:2px solid #111; padding-bottom:6px; margin-bottom:10px}
+.print-page table{width:100%; border-collapse:collapse; font-size:11.5px; margin:8px 0}
+.print-page table th,.print-page table td{border:1px solid #94a3b8; padding:4px 6px; text-align:left}
+.print-meta{display:grid; grid-template-columns:repeat(3,1fr); gap:4px 14px; font-size:12px; margin-bottom:10px}
+.print-meta div b{display:block; font-size:9.5px; color:#555; text-transform:uppercase}
+.print-photos{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px}
+.print-photos img{width:110px; height:110px; object-fit:cover; border:1px solid #999}
+.sig-row{display:flex; justify-content:space-between; margin-top:34px}
+.sig-row div{width:45%; text-align:center; border-top:1px solid #111; padding-top:4px; font-size:11px}
+
+.toast-wrap{position:fixed; bottom:20px; right:20px; z-index:200; display:flex; flex-direction:column; gap:8px}
+.toast{background:#0f172a; color:#fff; padding:11px 16px; border-radius:8px; font-size:13px; font-weight:600; box-shadow:var(--shadow-lg); animation:pop .15s}
+.toast.err{background:#7f1d1d}
+.toast.ok{background:#14532d}
+
+</style>
+</head>
+<body>
+
+<header id="app-header">
+  <div class="brand"><div class="logo">P</div> Painel de Checklist de Veículos <span class="sub">PIRATRUCK</span></div>
+  <div id="status-badge"><span class="dot dot-red" id="status-dot"></span><span id="status-text">Modo local (temporário)</span></div>
+  <div class="user-chip">👤 <input id="current-user-input" placeholder="Seu nome..."></div>
+</header>
+
+<nav id="tab-nav">
+  <button class="active" data-tab="compra">🚗 Compra</button>
+  <button data-tab="manutencao">🔧 Manutenção</button>
+  <button data-tab="empresa">🚚 Veículos da Empresa</button>
+  <button data-tab="prevenda">✅ Manutenção Pré-venda</button>
+  <button data-tab="historico">📜 Histórico</button>
+  <button data-tab="config">⚙️ Configuração</button>
+</nav>
+
+<main>
+  <div class="tab-panel active" id="panel-compra"></div>
+  <div class="tab-panel" id="panel-manutencao"></div>
+  <div class="tab-panel" id="panel-empresa"></div>
+  <div class="tab-panel" id="panel-prevenda"></div>
+  <div class="tab-panel" id="panel-historico"></div>
+  <div class="tab-panel" id="panel-config"></div>
+</main>
+
+<!-- Modal genérico -->
+<div class="modal-overlay no-print" id="modal-overlay" onclick="if(event.target===this) closeModal()">
+  <div class="modal-box" id="modal-content"></div>
+</div>
+
+<!-- Assistente Claude embutido -->
+<button class="no-print" id="chat-fab" onclick="toggleChatPanel()" title="Falar com o assistente Claude"
+  style="position:fixed; bottom:22px; right:22px; z-index:150; width:56px; height:56px; border-radius:50%;
+  background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:#fff; border:none; font-size:24px; box-shadow:0 6px 18px rgba(15,23,42,.3);">💬</button>
+
+<div class="no-print" id="chat-panel"
+  style="position:fixed; bottom:88px; right:22px; z-index:150; width:340px; max-width:92vw; height:440px; max-height:70vh;
+  background:#fff; border-radius:14px; box-shadow:0 10px 30px rgba(15,23,42,.25); display:none; flex-direction:column; overflow:hidden; border:1px solid #e2e8f0;">
+  <div style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:#fff; padding:12px 14px; font-weight:800; font-size:13.5px; display:flex; justify-content:space-between; align-items:center">
+    🤖 Assistente Claude — dúvidas do painel
+    <button onclick="toggleChatPanel()" style="background:none;border:none;color:#fff;font-size:18px">✕</button>
+  </div>
+  <div id="chat-messages" style="flex:1; overflow-y:auto; padding:12px; font-size:13px; display:flex; flex-direction:column; gap:8px"></div>
+  <div style="display:flex; gap:6px; padding:10px; border-top:1px solid #e2e8f0">
+    <textarea id="chat-input" placeholder="Pergunte algo..." rows="1" onkeydown="chatInputKeydown(event)" style="flex:1; resize:none; border:1.5px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:13px; font-family:inherit"></textarea>
+    <button class="btn btn-primary btn-sm" onclick="sendChatMessage()">➤</button>
+  </div>
+</div>
+<style>
+  #chat-panel.open{ display:flex !important; }
+  .chat-msg{ padding:8px 10px; border-radius:8px; max-width:90%; }
+  .chat-msg.user{ background:#dbeafe; align-self:flex-end; }
+  .chat-msg.bot{ background:#f1f5f9; align-self:flex-start; }
+</style>
+
+<div class="toast-wrap no-print" id="toast-wrap"></div>
+<div id="print-area"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+/* =========================================================================
+   PAINEL DE CHECKLIST DE VEÍCULOS — PIRATRUCK
+   App 100% front-end (HTML+JS). Sem backend próprio: os dados podem ficar
+   em memória local (modo temporário) ou sincronizados em tempo real via
+   Firebase Firestore (gratuito) quando configurado em "Configuração".
+   ========================================================================= */
+
+/* ---------- Catálogo de tipos de veículo/implemento (extraído do Excel) --------- */
+/* ===== PIRATRUCK — melhorias do assistente: config embutida + login de equipe ===== */
+const EMBEDDED_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCjrbTh9_yovb2CRtsXNL6fuOEyXnpFvcY",
+  authDomain: "painel-veiculos-4a6f5.firebaseapp.com",
+  projectId: "painel-veiculos-4a6f5",
+  storageBucket: "painel-veiculos-4a6f5.firebasestorage.app",
+  messagingSenderId: "910089422875",
+  appId: "1:910089422875:web:fbca3bf5d3f2bdeea950be",
+  measurementId: "G-HX35ZBYJ2S"
+};
+/* Senha unica da equipe -- TROQUE aqui quando quiser mudar: */
+const TEAM_USER = "PIRATRUCK";
+const TEAM_PASSWORD = "PRTK2026";
+
+/* Parser tolerante do firebaseConfig (aceita objeto JS ou JSON, sem quebrar valores com ":") */
+function parseFirebaseConfigText(raw){
+  raw = String(raw || "").trim();
+  const m = raw.replace(/^[\s\S]*?(\{[\s\S]*\})[\s\S]*$/, "$1");
+  try{ return JSON.parse(m); }catch(e){}
+  try{ return (new Function("return (" + m + ")"))(); }catch(e){}
+  return null;
+}
+
+/* Tela de login simples da equipe (barreira de acesso) */
+function piratruckLoginGate(){
+  try{ if(sessionStorage.getItem("pt_auth") === "1") return; }catch(e){}
+  const ov = document.createElement("div");
+  ov.id = "pt-login-overlay";
+  ov.style.cssText = "position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);display:flex;align-items:center;justify-content:center;padding:20px";
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;max-width:340px;width:100%;padding:26px 22px;box-shadow:0 10px 30px rgba(0,0,0,.3);text-align:center;font-family:Segoe UI,system-ui,sans-serif">'
+    + '<div style="font-size:34px;margin-bottom:6px">🚚</div>'
+    + '<h2 style="margin:0 0 4px;font-size:18px;color:#0f172a">Painel de Checklist</h2>'
+    + '<div style="font-size:12.5px;color:#64748b;margin-bottom:16px">PIRATRUCK — acesso restrito da equipe</div>'
+    + '<input id="pt-user" type="text" placeholder="Login" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:11px;font-size:14px;margin-bottom:10px">'
+    + '<input id="pt-pass" type="password" placeholder="Senha da equipe" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:11px;font-size:14px;margin-bottom:10px" onkeydown="if(event.key===\'Enter\')ptTryLogin()">'
+    + '<div id="pt-pass-err" style="display:none;color:#dc2626;font-size:12px;margin-bottom:8px">Login ou senha incorretos.</div>'
+    + '<button onclick="ptTryLogin()" style="width:100%;background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:11px;font-weight:700;font-size:14px;cursor:pointer">Entrar</button>'
+    + '</div>';
+  document.body.appendChild(ov);
+  setTimeout(function(){ var el = document.getElementById("pt-pass"); if(el) el.focus(); }, 60);
+}
+function ptTryLogin(){
+  const el = document.getElementById("pt-pass");
+  const uel = document.getElementById("pt-user");
+  if(uel && uel.value.trim().toUpperCase() === TEAM_USER && el && el.value === TEAM_PASSWORD){
+    try{ sessionStorage.setItem("pt_auth", "1"); }catch(e){}
+    const ov = document.getElementById("pt-login-overlay");
+    if(ov) ov.remove();
+  } else {
+    const err = document.getElementById("pt-pass-err");
+    if(err) err.style.display = "block";
+  }
+}
+
+
+const VEHICLE_TYPES = {"carro": {"label": "Carro", "items": ["PNEUS EM ORDEM?", "ESTEPE EM ORDEM?", "RODAS EM ORDEM?", "KIT PARA TROCA DE PNEUS - MACACO, TRIANGULO, CHAVE DE RODA?", "FREIOS - DE PÉ E DE MÃO FUNCIONANDO?", "LUZ DE LANTERNAS E FREIO TRASEIRAS FUNCIONANDO?", "FAROIS ALTO E BAIXO FUNCIONANDO?", "LUZ DE RÉ FUNCIONANDO?", "SETAS ESQUERDA E DIREITA FUNCIONANDO?", "LIMPADOR DE PARÁ-BRISA, BORRACHAS E ESGUICHO DE ÁGUA?", "BUZINA FUNCIONANDO?", "VIDROS ELÉTRICOS FUNCIONANDO?", "RETROVISORES ELÉTRICOS FUNCIONANDO?", "MOSTRADORES E BOTÕES DO PAINEL FUNCIONANDO?", "RADIO MP3 / CD?", "APRESENTANDO VAZAMENTO DE ÁGUA, COMBUSTÍVEL OU ÓLEO?", "NÍVEL ADEQUADO DE ÓLEO DO MOTOR?", "NÍVEL ADEQUADO DE ÓLEO DE FREIO?", "NÍVEL ADEQUADO DA ÁGUA DO RADIADOR?", "TROCA DE ÓLEO E FILTRO, VER NA ETIQUETA, ANOTAR O PRAZO", "PORTAS E MAÇANETAS FUNCIONANDO ADEQUADAMENTE?", "CINTO DE SEGURANÇA FUNCIONANDO ADEQUADAMENTE?", "EXTINTOR EM ORDEM? ANOTAR DATA DE VALIDADE", "BANCOS E TAPETES EM ORDEM?", "NÚMERO DO CHASSI, CONFERE?", "NÚMERO DO CHASSI NOS VIDROS, CONFERE COM O DOC?", "NÚMERO DO MOTOR, CONFERE COM O DOC?", "CHAVE RESERVA?", "MANUAL DO PROPRIETARIO?"]}, "caminhonete": {"label": "Caminhonete", "items": ["PNEUS EM ORDEM?", "ESTEPE EM ORDEM?", "RODAS EM ORDEM?", "KIT PARA TROCA DE PNEUS - MACACO, TRIANGULO, CHAVE DE RODA?", "FREIOS - DE PÉ E DE MÃO FUNCIONANDO?", "LUZ DE LANTERNAS E FREIO TRASEIRAS FUNCIONANDO?", "FAROIS ALTO E BAIXO FUNCIONANDO?", "LUZ DE RÉ FUNCIONANDO?", "SETAS ESQUERDA E DIREITA FUNCIONANDO?", "LIMPADOR DE PARÁ-BRISA, BORRACHAS E ESGUICHO DE ÁGUA?", "BUZINA FUNCIONANDO?", "VIDROS ELÉTRICOS FUNCIONANDO?", "RETROVISORES ELÉTRICOS FUNCIONANDO?", "MOSTRADORES E BOTÕES DO PAINEL FUNCIONANDO?", "RADIO MP3 / CD?", "APRESENTANDO VAZAMENTO DE ÁGUA, COMBUSTÍVEL OU ÓLEO?", "NÍVEL ADEQUADO DE ÓLEO DO MOTOR?", "NÍVEL ADEQUADO DE ÓLEO DE FREIO?", "NÍVEL ADEQUADO DA ÁGUA DO RADIADOR?", "TROCA DE ÓLEO E FILTRO, VER NA ETIQUETA, ANOTAR O PRAZO", "PORTAS E MAÇANETAS FUNCIONANDO ADEQUADAMENTE?", "CINTO DE SEGURANÇA FUNCIONANDO ADEQUADAMENTE?", "EXTINTOR EM ORDEM? ANOTAR DATA DE VALIDADE", "BANCOS E TAPETES EM ORDEM?", "NÚMERO DO CHASSI, CONFERE?", "NÚMERO DO CHASSI NOS VIDROS, CONFERE COM O DOC?", "NÚMERO DO MOTOR, CONFERE COM O DOC?", "CHAVE RESERVA?", "MANUAL DO PROPRIETARIO?"]}, "leves": {"label": "Veículos Leves (utilitários)", "items": ["PNEUS EM ORDEM?", "ESTEPE EM ORDEM?", "RODAS EM ORDEM?", "KIT PARA TROCA DE PNEUS - MACACO, TRIANGULO, CHAVE DE RODA?", "FREIOS - DE PÉ E DE MÃO FUNCIONANDO?", "LUZ DE LANTERNAS E FREIO TRASEIRAS FUNCIONANDO?", "FAROIS ALTO E BAIXO FUNCIONANDO?", "LUZ DE RÉ E ALARME DE RÉ FUNCIONANDO?", "SETAS DA ESQUERDA, DA DIREITA E ALERTA FUNCIONANDO?", "LIMPADOR DE PARÁ-BRISA, BORRACHAS E ESGUICHO DE ÁGUA?", "BUZINA FUNCIONANDO?", "VIDROS ELÉTRICOS FUNCIONANDO?", "MOSTRADORES E BOTÕES DO PAINEL FUNCIONANDO?", "RADIO MP3 / CD?", "APRESENTANDO VAZAMENTO DE ÁGUA, COMBUSTÍVEL OU ÓLEO?", "NÍVEL ADEQUADO DE ÓLEO DO MOTOR?", "NÍVEL ADEQUADO DE ÓLEO DE FREIO?", "NÍVEL ADEQUADO DA ÁGUA DO RADIADOR?", "TROCA DE ÓLEO E FILTRO, VER NA ETIQUETA, ANOTAR O PRAZO", "PORTAS E MAÇANETAS FUNCIONANDO ADEQUADAMENTE?", "RETROVISORES EM BOM ESTADO E FUNCIONANDO?", "TAMPA DO COMBUSTÍVEL DO TANQUE ESTÁ EM ORDEM?", "CINTO DE SEGURANÇA FUNCIONANDO ADEQUADAMENTE?", "EXTINTOR EM ORDEM? ANOTAR DATA DE VALIDADE", "BANCOS E TAPETES EM ORDEM?", "NÚMERO DO CHASSI, CONFERE?", "NÚMERO DO CHASSI NOS VIDROS, CONFERE COM O DOC?", "NÚMERO DO MOTOR, CONFERE COM O DOC?", "SELO DA CABINE - FRONTAL, LATERAL E ABAIXO CONFERE COM O DOC?", "PLAQUETA DE CABINE?", "CHAVE RESERVA?", "MANUAL DO PROPRIETARIO?"]}, "pesados": {"label": "Veículos Pesados (caminhão)", "items": ["PNEUS EM ORDEM?", "ESTEPE EM ORDEM?", "RODAS EM ORDEM?", "KIT PARA TROCA DE PNEUS - MACACO, TRIANGULO, CHAVE DE RODA?", "FREIOS - DE PÉ E DE MÃO FUNCIONANDO?", "LUZ DE LANTERNAS E FREIO TRASEIRAS FUNCIONANDO?", "FAROIS ALTO E BAIXO FUNCIONANDO?", "LUZ DE RÉ E ALARME DE RÉ FUNCIONANDO?", "SETAS DA ESQUERDA, DA DIREITA E ALERTA FUNCIONANDO?", "LIMPADOR DE PARÁ-BRISA, BORRACHAS E ESGUICHO DE ÁGUA?", "BUZINA FUNCIONANDO?", "VIDROS ELÉTRICOS FUNCIONANDO?", "MOSTRADORES E BOTÕES DO PAINEL FUNCIONANDO?", "RADIO MP3 / CD?", "APRESENTANDO VAZAMENTO DE ÁGUA, COMBUSTÍVEL OU ÓLEO?", "NÍVEL ADEQUADO DE ÓLEO DO MOTOR?", "NÍVEL ADEQUADO DE ÓLEO DE FREIO?", "NÍVEL ADEQUADO DA ÁGUA DO RADIADOR?", "TROCA DE ÓLEO E FILTRO, VER NA ETIQUETA, ANOTAR O PRAZO", "PORTAS E MAÇANETAS FUNCIONANDO ADEQUADAMENTE?", "RETROVISORES EM BOM ESTADO E FUNCIONANDO?", "TAMPA DO COMBUSTÍVEL DO TANQUE ESTÁ EM ORDEM?", "CINTO DE SEGURANÇA FUNCIONANDO ADEQUADAMENTE?", "EXTINTOR EM ORDEM? ANOTAR DATA DE VALIDADE", "BANCOS E TAPETES EM ORDEM?", "NÚMERO DO CHASSI, CONFERE?", "NÚMERO DO CHASSI NOS VIDROS, CONFERE COM O DOC?", "NÚMERO DO MOTOR, CONFERE COM O DOC?", "SELO DA CABINE - FRONTAL, LATERAL E ABAIXO CONFERE COM O DOC?", "PLAQUETA DE CABINE?", "CHAVE RESERVA?", "MANUAL DO PROPRIETARIO?"]}, "basculante": {"label": "Implemento Basculante", "items": ["PNEUS EM ORDEM?", "RODAS EM ORDEM?", "ESTEPE EM ORDEM?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "LATERAIS", "TAMPA TRASEIRA", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? ESTADO?", "CAIXA COZINHA", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "ARCO DA LONA E VINI LONA", "ARCO DO FUERO", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA", "NÚMERO DO CHASSI CONFERE COM O DOC?", "DADOS TECNICOS", "QUAL O COMPRIMENTO/LARGURA E ALTURA", "TIPO DE ASSOALHO", "N° DE EIXOS"]}, "bau": {"label": "Implemento Baú", "items": ["PNEUS EM ORDEM?", "RODAS EM ORDEM?", "ESTEPE EM ORDEM?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "LATERAIS", "PORTA LATERAL", "PORTA TRASEIRA", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? ESTADO?", "CAIXA COZINHA", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "RIPAMENTO INTERNO", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA", "NÚMERO DO CHASSI CONFERE COM O DOC?", "DADOS TECNICOS", "QUAL O COMPRIMENTO/LARGURA E ALTURA", "TIPO DE ASSOALHO", "N° DE EIXOS"]}, "granel": {"label": "Implemento Granel", "items": ["PNEUS EM ORDEM?", "RODAS EM ORDEM?", "ESTEPE EM ORDEM?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "TAMPAS LATERAIS", "FUEIRO", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? ESTADO?", "CAIXA COZINHA", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "ARCO DA LONA E VINI LONA", "ARCO DO FUERO", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA", "NÚMERO DO CHASSI CONFERE COM O DOC?", "DADOS TECNICOS", "QUAL O COMPRIMENTO/LARGURA E ALTURA", "TIPO DE ASSOALHO", "N° DE EIXOS"]}, "sider": {"label": "Implemento Sider", "items": ["PNEUS EM ORDEM?", "RODAS EM ORDEM?", "ESTEPE EM ORDEM?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "LONAS LATERAIS", "PORTAS TRASEIRA", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? ESTADO?", "CAIXA COZINHA", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "TRAVESSA CONTENÇÃO", "TRILHO", "COLUNA MOVEL", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA", "NÚMERO DO CHASSI CONFERE COM O DOC?", "DADOS TECNICOS", "QUAL O COMPRIMENTO/LARGURA E ALTURA", "TIPO DE ASSOALHO", "N° DE EIXOS"]}, "tanque": {"label": "Implemento Tanque", "items": ["PNEUS E CONDIÇÕES?", "RODAS E CONDIÇÕES?", "ESTEPE E CONDIÇÕES?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "LATERAIS", "TRASEIRA", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? QUAL O ESTADO?", "EXTINTORES", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA", "DADOS TECNICOS", "QUAL O COMPRIMENTO/LARGURA E ALTURA", "N° DE EIXOS"]}, "tora": {"label": "Implemento Tora", "items": ["PNEUS E CONDIÇÕES?", "RODAS E CONDIÇÕES?", "ESTEPE E CONDIÇÕES?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "LATERAIS", "PORTA LATERAL", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? QUAL O ESTADO?", "CAIXA COZINHA", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "PORTAS TRASEIRA", "RIPAMENTO INTERNO", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA"]}, "eixo4": {"label": "Semirreboque Graneleira 4º Eixo", "items": ["PNEUS E CONDIÇÕES?", "RODAS E CONDIÇÕES?", "ESTEPE E CONDIÇÕES?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "TAMPAS LATERAIS", "FUEIRO", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? QUAL O ESTADO?", "CAIXA COZINHA", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "ARCO DA LONA E VINI LONA", "ARCO DO FUEIRO", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA", "SUSPENSÃO IBERO S400", "DADOS TECNICOS", "QUAL O COMPRIMENTO/LARGURA E ALTURA", "TIPO DE ASSOALHO", "N° DE EIXOS"]}, "moto": {"label": "Moto", "items": ["PNEUS EM BOAS CONDIÇÕES?", "RODAS EM BOM ESTADO?", "APRESENTANDO VAZAMENTO DE ÁGUA, COMBUSTIVEL OU OLEO?", "LUZ DE LANTERNAS E FREIO TRASEIRAS FUNCIONANDO?", "FAROIS ALTO E BAIXO FUNCIONANDO?", "SETAS ESQUERDA E DIREITA FUNCIONANDO?", "NIVEL ADEQUADO DE ÓLEO DO MOTOR?", "CHAVES", "BUZINA FUNCIONANDO", "MOSTRADORES E BOTÕES DO PAINEL FUNCIONANDO?", "NUMERO CHASSI? CONFERE?", "NUMERO MOTOR? ESTÁ PADRAO?", "MANUAL DO PROPRIETARIO", "CHAVE RESERVA"]}, "retroescavadeira": {"label": "Retroescavadeira", "items": ["LUZES DIANTEIRA, FUNDIONANDO?", "LUZES TRASEIRA, FUNCIONANDO?", "LUZ DE RÉ E ALARME FUNCIONANDO?", "ALAVANCA DE DIREÇÃO P/ FRENTE E P/TRÁS, FUNCIONAM?", "ALAVANCA DE DIREÇÃO P/ ESQUERDA E P/DIREITA, FUNCIONAM?", "ALGUM BOTÃO QUEBRADO NO PAINEL?", "AR CONDICIONADO FUNCIONANDO E GELANDO?", "CINTO DE SEGURANÇA FUNCIONANDO?", "TROCA DE OLEO EM DIA, VIDE ETIQUETA?", "PNEUS TRASEIRO E DIANTEIRO EM BOM ESTADO?", "MANGUEIRAS DA LANÇA E HIDRAULICO, EM BOM ESTADO?", "ALGUM VAZAMENTO DE ÓLEO?", "APRESENTA DEFORMAÇÃO OU AVARIA NA LATARIA?", "NIVEL ADEQUADO DE ÓLEO DO MOTOR?", "NIVEL ADEQUADO DE ÓLEO DE HIDRAULICO?", "NIVEL ADEQUANDO DA AGUA DO RADIADOR?", "OPERADOR QUALIFICADO?", "SAINDO COM EQUIPAMENTO?"]}, "bobcat": {"label": "Bobcat", "items": ["LUZES DIANTEIRA, FUNDIONANDO?", "LUZES TRASEIRA, FUNCIONANDO?", "LUZ DE RÉ E ALARME FUNCIONANDO?", "ALAVANCA DE DIREÇÃO P/ FRENTE E P/TRÁS, FUNCIONAM?", "ALAVANCA DE DIREÇÃO P/ ESQUERDA E P/DIREITA, FUNCIONAM?", "ALGUM BOTÃO QUEBRADO NO PAINEL?", "AR CONDICIONADO FUNCIONANDO E GELANDO?", "CINTO DE SEGURANÇA FUNCIONANDO?", "TROCA DE OLEO EM DIA, VIDE ETIQUETA?", "PNEUS TRASEIRO E DIANTEIRO EM BOM ESTADO?", "MANGUEIRAS DA LANÇA E HIDRAULICO, EM BOM ESTADO?", "ALGUM VAZAMENTO DE ÓLEO?", "APRESENTA DEFORMAÇÃO OU AVARIA NA LATARIA?", "NIVEL ADEQUADO DE ÓLEO DO MOTOR?", "NIVEL ADEQUADO DE ÓLEO DE HIDRAULICO?", "NIVEL ADEQUANDO DA AGUA DO RADIADOR?", "OPERADOR QUALIFICADO?", "SAINDO COM EQUIPAMENTO?"]}};
+
+const QUICK_CHECK_ITEMS = [
+  "PNEUS EM BOM ESTADO?",
+  "NÍVEL DE ÓLEO/ÁGUA OK?",
+  "DOCUMENTOS DO VEÍCULO PRESENTES?",
+  "AVARIAS/RISCOS VISÍVEIS NOVOS?"
+];
+
+const TAG_LABEL = {
+  compra: "Compra de Veículo",
+  manutencao: "Manutenção",
+  empresa: "Veículo da Empresa",
+  prevenda: "Manutenção Pré-venda"
+};
+const TAG_CLASS = { compra:"tag-compra", manutencao:"tag-manutencao", empresa:"tag-empresa", prevenda:"tag-prevenda" };
+
+/* ---------- Estado global ---------- */
+const state = {
+  records: [],
+  currentUser: "",
+  fbConfig: null,
+  online: false,
+  activeTab: "compra"
+};
+const checklistState = {};   // id -> [{item,status,obs}]
+const photoState = {};       // id -> [{name,dataUrl}]
+let fbApp = null, fbDb = null, fbUnsub = null;
+
+/* ================= Utilidades ================= */
+function pad(n){ return String(n).padStart(2,"0"); }
+function todayISO(){ const d = new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function nowLocalISO(){ const d = new Date(); return todayISO()+"T"+pad(d.getHours())+":"+pad(d.getMinutes()); }
+function fmtDateBR(iso){
+  if(!iso) return "—";
+  const parts = String(iso).slice(0,10).split("-");
+  if(parts.length!==3) return iso;
+  return parts[2]+"/"+parts[1]+"/"+parts[0];
+}
+function fmtDateTimeBR(iso){
+  if(!iso) return "—";
+  const [d,t] = String(iso).split("T");
+  return fmtDateBR(d) + (t? " "+t.slice(0,5) : "");
+}
+function escapeHtml(s){
+  return String(s==null?"":s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function escapeAttr(s){ return escapeHtml(s); }
+function uid(){ return "id_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,9); }
+function byId(id){ return document.getElementById(id); }
+function qs(sel, root){ return (root||document).querySelector(sel); }
+function qsa(sel, root){ return Array.from((root||document).querySelectorAll(sel)); }
+
+function showToast(msg, type){
+  const wrap = byId("toast-wrap");
+  const t = document.createElement("div");
+  t.className = "toast" + (type==="err"?" err":type==="ok"?" ok":"");
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(()=>{ t.remove(); }, 4200);
+}
+
+/* ================= Modal genérico ================= */
+function openModal(html, widthClass){
+  const overlay = byId("modal-overlay");
+  byId("modal-content").innerHTML = html;
+  overlay.classList.add("open");
+}
+function closeModal(){
+  byId("modal-overlay").classList.remove("open");
+  byId("modal-content").innerHTML = "";
+}
+
+/* ================= Componentes de formulário (helpers) ================= */
+function fieldWrap(labelText, required, innerHtml, spanClass, errId, hint){
+  return '<div class="field '+(spanClass||"")+'">'
+    + '<label>'+labelText+(required?'<span class="req">*</span>':'')+'</label>'
+    + innerHtml
+    + (hint? '<div class="hint">'+hint+'</div>' : '')
+    + (errId? '<div class="err-msg" id="'+errId+'">Campo obrigatório.</div>' : '')
+    + '</div>';
+}
+function textInput(id, opts){
+  opts = opts||{};
+  return '<input type="'+(opts.type||"text")+'" id="'+id+'" placeholder="'+escapeAttr(opts.placeholder||"")+'" value="'+escapeAttr(opts.value||"")+'"'+(opts.step?' step="'+opts.step+'"':'')+'>';
+}
+function textareaInput(id, opts){
+  opts = opts||{};
+  return '<textarea id="'+id+'" placeholder="'+escapeAttr(opts.placeholder||"")+'">'+escapeHtml(opts.value||"")+'</textarea>';
+}
+function selectInput(id, options, opts){
+  opts = opts||{};
+  return '<select id="'+id+'"><option value="">-- selecione --</option>'
+    + options.map(o=>'<option value="'+escapeAttr(o)+'" '+(o===opts.value?"selected":"")+'>'+escapeHtml(o)+'</option>').join("")
+    + '</select>';
+}
+function radioGroup(name, options, opts){
+  opts = opts||{};
+  return '<div class="radio-row" id="'+name+'" data-radiogroup="1">'
+    + options.map(o=>'<label><input type="radio" name="'+name+'" value="'+escapeAttr(o)+'" '+(o===opts.value?"checked":"")+' onclick="onRadioChange(\''+name+'\')"> '+escapeHtml(o)+'</label>').join("")
+    + '</div>';
+}
+function getRadioValue(name){
+  const el = qs('input[name="'+name+'"]:checked');
+  return el ? el.value : "";
+}
+function onRadioChange(name){
+  const el = byId(name);
+  if(el) el.classList.remove("err");
+  const errEl = byId(name+"_err");
+  if(errEl) errEl.classList.remove("show");
+  // re-render conditional sections if a hook exists
+  const hook = window["onRadio_"+name];
+  if(typeof hook === "function") hook(getRadioValue(name));
+}
+
+/* ---- Seletor de tipo de veículo/implemento ---- */
+function vehicleTypePicker(id, selectedKey){
+  const cards = Object.keys(VEHICLE_TYPES).map(function(k){
+    const v = VEHICLE_TYPES[k];
+    return '<div class="type-card '+(k===selectedKey?"sel":"")+'" data-key="'+k+'" onclick="selectVehicleType(\''+id+'\', this)">'+escapeHtml(v.label)+'</div>';
+  }).join("");
+  return '<div class="type-picker" id="'+id+'" data-value="'+(selectedKey||"")+'">'+cards+'</div>';
+}
+function selectVehicleType(pickerId, el){
+  const picker = byId(pickerId);
+  qsa(".type-card", picker).forEach(c=>c.classList.remove("sel"));
+  el.classList.add("sel");
+  picker.dataset.value = el.dataset.key;
+  picker.classList.remove("err");
+  const hook = window["onTypeChange_"+pickerId];
+  if(typeof hook === "function") hook(el.dataset.key);
+}
+function getVehicleTypeValue(pickerId){
+  const el = byId(pickerId);
+  return el ? (el.dataset.value||"") : "";
+}
+
+/* ---- Tabela de checklist dinâmica ---- */
+function checklistTable(id, items, existingValues){
+  checklistState[id] = (items||[]).map(function(it, i){
+    const ex = existingValues && existingValues[i];
+    return { item: it, status: ex? ex.status : null, obs: ex? (ex.obs||"") : "" };
+  });
+  return renderChecklistBody(id);
+}
+function renderChecklistBody(id){
+  const items = checklistState[id];
+  if(!items || !items.length){
+    return '<p class="hint" id="'+id+'_wrap">Selecione o tipo de veículo/implemento acima para carregar os itens do checklist físico e documental.</p>';
+  }
+  const rows = items.map(function(row, i){
+    return '<tr data-idx="'+i+'">'
+      + '<td class="checklist-item-name">'+escapeHtml(row.item)+'</td>'
+      + '<td><div class="status-group">'
+        + '<button type="button" class="status-btn ok '+(row.status==="OK"?"sel":"")+'" onclick="setChecklistStatus(\''+id+'\','+i+',\'OK\')">OK</button>'
+        + '<button type="button" class="status-btn bad '+(row.status==="NÃO"?"sel":"")+'" onclick="setChecklistStatus(\''+id+'\','+i+',\'NÃO\')">NÃO</button>'
+        + '<button type="button" class="status-btn na '+(row.status==="N/A"?"sel":"")+'" onclick="setChecklistStatus(\''+id+'\','+i+',\'N/A\')">N/A</button>'
+        + '</div></td>'
+      + '<td class="checklist-obs"><input type="text" placeholder="Observação'+(row.status==="NÃO"?" (obrigatória)":"")+'" id="'+id+'_obs_'+i+'" value="'+escapeAttr(row.obs)+'" onchange="setChecklistObs(\''+id+'\','+i+',this.value)"></td>'
+      + '</tr>';
+  }).join("");
+  const done = items.filter(r=>r.status).length;
+  return '<div id="'+id+'_wrap">'
+    + '<div class="checklist-progress" id="'+id+'_progress">'+done+'/'+items.length+' itens avaliados'+(done<items.length? ' — <span style="color:#dc2626">faltam '+(items.length-done)+'</span>':' ✅')+'</div>'
+    + '<table class="checklist-table" id="'+id+'"><thead><tr><th style="width:44%">Item verificado</th><th style="width:26%">Status</th><th>Observação</th></tr></thead><tbody>'+rows+'</tbody></table>'
+    + '</div>';
+}
+function setChecklistStatus(id, idx, status){
+  checklistState[id][idx].status = status;
+  const table = byId(id);
+  const row = table ? table.querySelector('tr[data-idx="'+idx+'"]') : null;
+  if(row){
+    qsa(".status-btn", row).forEach(function(b){ b.classList.remove("sel"); });
+    const cls = status==="OK" ? "ok" : status==="NÃO" ? "bad" : "na";
+    const btn = row.querySelector(".status-btn."+cls);
+    if(btn) btn.classList.add("sel");
+    const obsInput = byId(id+"_obs_"+idx);
+    if(obsInput){
+      obsInput.placeholder = "Observação" + (status==="NÃO" ? " (obrigatória)" : "");
+      if(status!=="NÃO") obsInput.classList.remove("err");
+    }
+  }
+  updateChecklistProgress(id);
+}
+function updateChecklistProgress(id){
+  const items = checklistState[id];
+  if(!items) return;
+  const done = items.filter(function(r){ return r.status; }).length;
+  const prog = byId(id+"_progress");
+  if(prog) prog.innerHTML = done+"/"+items.length+" itens avaliados"+(done<items.length? ' — <span style="color:#dc2626">faltam '+(items.length-done)+'</span>':' ✅');
+}
+function setChecklistObs(id, idx, val){
+  checklistState[id][idx].obs = val;
+}
+function reloadChecklistFor(id, typeKey){
+  const t = VEHICLE_TYPES[typeKey];
+  const items = t ? t.items : [];
+  const wrap = byId(id+"_wrap");
+  const html = checklistTable(id, items);
+  if(wrap) wrap.outerHTML = html;
+}
+function validateChecklist(id, errBoxId){
+  const items = checklistState[id];
+  const errBox = byId(errBoxId);
+  if(!items || !items.length){
+    if(errBox){ errBox.textContent = "Selecione o tipo de veículo e preencha todos os itens do checklist."; errBox.classList.add("show"); }
+    return false;
+  }
+  let ok = true;
+  items.forEach(function(row, i){
+    const obsInput = byId(id+"_obs_"+i);
+    if(!row.status){ ok = false; }
+    if(row.status==="NÃO" && !row.obs.trim()){ ok=false; if(obsInput) obsInput.classList.add("err"); }
+    else if(obsInput){ obsInput.classList.remove("err"); }
+  });
+  if(errBox){
+    if(!ok){ errBox.textContent = "Marque um status (OK/NÃO/N-A) para TODOS os itens. Itens marcados como NÃO precisam de observação."; errBox.classList.add("show"); }
+    else { errBox.classList.remove("show"); }
+  }
+  return ok;
+}
+function checklistSummary(items){
+  const c = { OK:0, "NÃO":0, "N/A":0 };
+  (items||[]).forEach(r=>{ if(r.status) c[r.status] = (c[r.status]||0)+1; });
+  return c;
+}
+
+/* ---- Upload / compressão de fotos ---- */
+function photoUploader(id, minCount, existing){
+  photoState[id] = existing ? existing.slice() : (photoState[id]||[]);
+  return '<div class="photo-actions" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
+    + '<button type="button" style="flex:1;min-width:150px;padding:12px;border:1.5px solid #16a34a;background:#16a34a;color:#fff;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer" onclick="openCamera(\''+id+'\')">📷 Tirar foto (câmera)</button>'
+    + '<button type="button" style="flex:1;min-width:150px;padding:12px;border:1.5px solid #cbd5e1;background:#f8fafc;color:#334155;border-radius:8px;font-size:14px;cursor:pointer" onclick="byId(\''+id+'_input\').click()">🖼️ Carregar do dispositivo</button>'
+    + '<input type="file" id="'+id+'_input" accept="image/*" multiple style="display:none" onchange="handlePhotoInput(\''+id+'\', this.files)">'
+    + '</div>'
+    + (minCount?'<div style="font-size:12px;color:#64748b;margin-bottom:6px">Mínimo '+minCount+' foto(s).</div>':'')
+    + '<div class="photo-grid" id="'+id+'_grid">'+renderPhotoGrid(id)+'</div>'
+    + '<div class="err-msg" id="'+id+'_err">Adicione ao menos '+minCount+' foto(s).</div>';
+}
+function renderPhotoGrid(id){
+  return (photoState[id]||[]).map(function(p, i){
+    return '<div class="photo-thumb"><img src="'+p.dataUrl+'"><button type="button" class="rm" onclick="removePhoto(\''+id+'\','+i+')">✕</button><div class="cap">'+escapeHtml(p.name)+'</div></div>';
+  }).join("");
+}
+function handlePhotoInput(id, fileList){
+  const files = Array.from(fileList||[]);
+  let pending = files.length;
+  if(!pending) return;
+  files.forEach(function(file){
+    compressImage(file, 900, 0.62).then(function(dataUrl){
+      photoState[id] = photoState[id]||[];
+      photoState[id].push({ name: file.name, dataUrl: dataUrl });
+      const grid = byId(id+"_grid");
+      if(grid) grid.innerHTML = renderPhotoGrid(id);
+      const err = byId(id+"_err");
+      if(err) err.classList.remove("show");
+    }).catch(function(){ showToast("Não foi possível carregar uma das fotos.","err"); });
+  });
+}
+function removePhoto(id, idx){
+  photoState[id].splice(idx,1);
+  byId(id+"_grid").innerHTML = renderPhotoGrid(id);
+}
+/* ===== Câmera ao vivo dentro do sistema (assistente PIRATRUCK) ===== */
+var _camId=null,_camStream=null,_camFacing="environment";
+function openCamera(id){
+  _camId=id;
+  var ov=document.getElementById("cam-overlay");
+  if(!ov){
+    ov=document.createElement("div"); ov.id="cam-overlay";
+    ov.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center";
+    ov.innerHTML='<video id="cam-video" autoplay playsinline muted style="max-width:96vw;max-height:72vh;border-radius:10px;background:#000"></video>'
+      +'<div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center">'
+      +'<button type="button" onclick="capturePhoto()" style="padding:13px 24px;font-size:16px;font-weight:bold;background:#16a34a;color:#fff;border:none;border-radius:10px;cursor:pointer">📸 Capturar</button>'
+      +'<button type="button" onclick="flipCamera()" style="padding:13px 18px;font-size:15px;background:#334155;color:#fff;border:none;border-radius:10px;cursor:pointer">🔄 Virar câmera</button>'
+      +'<button type="button" onclick="closeCamera()" style="padding:13px 18px;font-size:15px;background:#dc2626;color:#fff;border:none;border-radius:10px;cursor:pointer">✕ Fechar</button>'
+      +'</div><canvas id="cam-canvas" style="display:none"></canvas>';
+    document.body.appendChild(ov);
+  }
+  ov.style.display="flex";
+  startCam();
+}
+function startCam(){
+  stopCam();
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ showToast("Câmera não suportada neste navegador.","err"); closeCamera(); return; }
+  navigator.mediaDevices.getUserMedia({video:{facingMode:_camFacing},audio:false}).then(function(s){
+    _camStream=s; var v=document.getElementById("cam-video"); if(v){ v.srcObject=s; }
+  }).catch(function(){ showToast("Não consegui abrir a câmera. Verifique a permissão do navegador.","err"); closeCamera(); });
+}
+function flipCamera(){ _camFacing=(_camFacing==="environment")?"user":"environment"; startCam(); }
+function stopCam(){ if(_camStream){ _camStream.getTracks().forEach(function(t){ t.stop(); }); _camStream=null; } }
+function closeCamera(){ stopCam(); var ov=document.getElementById("cam-overlay"); if(ov) ov.style.display="none"; _camId=null; }
+function capturePhoto(){
+  var v=document.getElementById("cam-video");
+  if(!v||!v.videoWidth){ showToast("Aguarde a câmera carregar.","err"); return; }
+  var c=document.getElementById("cam-canvas"); c.width=v.videoWidth; c.height=v.videoHeight;
+  c.getContext("2d").drawImage(v,0,0);
+  var id=_camId;
+  var finish=function(file){ handlePhotoInput(id,[file]); showToast("Foto capturada ✓","ok"); };
+  if(c.toBlob){ c.toBlob(function(b){ finish(new File([b],"foto_"+Date.now()+".jpg",{type:"image/jpeg"})); },"image/jpeg",0.9); }
+  else { var d=c.toDataURL("image/jpeg",0.9); var bin=atob(d.split(",")[1]); var arr=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i); finish(new File([arr],"foto_"+Date.now()+".jpg",{type:"image/jpeg"})); }
+}
+function compressImage(file, maxDim, quality){
+  return new Promise(function(resolve, reject){
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = function(e){
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = function(){
+        let w = img.width, h = img.height;
+        if(w > h && w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else if(h >= w && h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function validatePhotos(id, min, errId){
+  const n = (photoState[id]||[]).length;
+  const ok = n >= min;
+  const err = byId(errId || (id+"_err"));
+  if(err) err.classList.toggle("show", !ok);
+  return ok;
+}
+
+/* ---- Validação genérica de campos obrigatórios simples ---- */
+function requireText(id){
+  const el = byId(id);
+  const ok = !!(el && el.value && el.value.trim());
+  if(el) el.classList.toggle("err", !ok);
+  return ok;
+}
+function requireRadio(name){
+  const ok = !!getRadioValue(name);
+  const el = byId(name);
+  if(el) el.classList.toggle("err", !ok);
+  const errEl = byId(name+"_err");
+  if(errEl) errEl.classList.toggle("show", !ok);
+  return ok;
+}
+function requireVehicleType(pickerId){
+  const ok = !!getVehicleTypeValue(pickerId);
+  const el = byId(pickerId);
+  if(el) el.classList.toggle("err", !ok);
+  const errEl = byId(pickerId+"_err");
+  if(errEl) errEl.classList.toggle("show", !ok);
+  return ok;
+}
+function requireOneOf(ids){
+  const ok = ids.some(function(id){ const el = byId(id); return el && el.value.trim(); });
+  ids.forEach(function(id){ const el = byId(id); if(el) el.classList.toggle("err", !ok); });
+  return ok;
+}
+
+/* ================= Boot / navegação de abas ================= */
+document.addEventListener("DOMContentLoaded", function(){
+  piratruckLoginGate();
+  loadFirebaseConfigFromUrl();
+  if(!state.fbConfig){ connectFirebase(EMBEDDED_FIREBASE_CONFIG, true); }
+  renderCompraTab();
+  renderManutencaoTab();
+  renderEmpresaTab();
+  renderPrevendaTab();
+  renderHistorico();
+  renderSettingsContent();
+  wireGlobalUser();
+  qsa("#tab-nav button").forEach(function(btn){
+    btn.addEventListener("click", function(){ switchTab(btn.dataset.tab); });
+  });
+});
+function switchTab(tab){
+  state.activeTab = tab;
+  qsa("#tab-nav button").forEach(b=>b.classList.toggle("active", b.dataset.tab===tab));
+  qsa(".tab-panel").forEach(p=>p.classList.toggle("active", p.id==="panel-"+tab));
+  if(tab==="historico") renderHistorico();
+}
+function wireGlobalUser(){
+  const input = byId("current-user-input");
+  input.value = state.currentUser;
+  input.addEventListener("input", function(){ state.currentUser = input.value; });
+}
+
+/* ================= ABA 1 — COMPRA ================= */
+function renderCompraTab(){
+  const id = "compra";
+  byId("panel-compra").innerHTML =
+    '<div class="banner banner-info">🚗 Preencha o checklist <b>documental e físico</b> completo do veículo que está chegando para compra (estoque ou consignado). Todos os campos são obrigatórios — o checklist só é salvo quando tudo estiver preenchido.</div>'
+    + '<div class="card">'
+    + '<h2>Identificação da operação</h2>'
+    + '<div class="grid">'
+      + fieldWrap("Seu nome (quem está preenchendo)", true, textInput(id+"_operador",{placeholder:"Ex: João (recepção)", value: state.currentUser}), "", id+"_operador_err")
+      + fieldWrap("Data do checklist", true, textInput(id+"_data",{type:"date", value: todayISO()}), "", id+"_data_err")
+      + fieldWrap("Situação", true, radioGroup(id+"_situacao", ["Estoque","Consignado"]), "", id+"_situacao_err")
+    + '</div>'
+    + '<div class="section-title">Tipo de veículo / implemento</div>'
+    + fieldWrap("Selecione o tipo (carrega os itens certos do checklist)", true, vehicleTypePicker(id+"_tipo", null), "full", id+"_tipo_err")
+    + '<div class="section-title">Dados do veículo</div>'
+    + '<div class="grid">'
+      + fieldWrap("Placa", false, textInput(id+"_placa",{placeholder:"ABC1D23"}), "", "", "Preencha Placa ou Chassi")
+      + fieldWrap("Chassi", false, textInput(id+"_chassi",{placeholder:"Se aplicável (ex: máquinas)"}))
+      + fieldWrap("Marca", true, textInput(id+"_marca"), "", id+"_marca_err")
+      + fieldWrap("Modelo", true, textInput(id+"_modelo"), "", id+"_modelo_err")
+      + fieldWrap("Ano Fab/Mod", true, textInput(id+"_ano",{placeholder:"2020/2021"}), "", id+"_ano_err")
+      + fieldWrap("KM / Horímetro", true, textInput(id+"_km",{type:"number"}), "", id+"_km_err")
+      + fieldWrap("Cor", true, textInput(id+"_cor"), "", id+"_cor_err")
+      + fieldWrap("Documentação entregue?", true, radioGroup(id+"_docentregue", ["Sim","Não"]), "", id+"_docentregue_err")
+    + '</div>'
+    + '<div class="section-title">Cliente / fornecedor que está entregando o veículo</div>'
+    + '<div class="grid">'
+      + fieldWrap("Cliente / Fornecedor", true, textInput(id+"_cliente"), "", id+"_cliente_err")
+      + fieldWrap("CPF / CNPJ", true, textInput(id+"_clientedoc"), "", id+"_clientedoc_err")
+      + fieldWrap("RG", false, textInput(id+"_clienterg"))
+      + fieldWrap("Telefone / Celular", true, textInput(id+"_tel",{type:"tel"}), "", id+"_tel_err")
+      + fieldWrap("Motorista que entregou", true, textInput(id+"_motorista"), "", id+"_motorista_err")
+    + '</div>'
+    + '<div class="section-title">Checklist físico e documental</div>'
+    + '<div id="'+id+'_checklist_wrap">'+checklistTable(id+"_checklist", [])+'</div>'
+    + '<div class="err-msg" id="'+id+'_checklist_err">Complete o checklist.</div>'
+    + '<div class="section-title">Avarias e fotos</div>'
+    + '<div class="grid">'
+      + fieldWrap("Possui avarias/danos visíveis?", true, radioGroup(id+"_possuiavarias", ["Sim","Não"]), "", id+"_possuiavarias_err")
+    + '</div>'
+    + '<div id="'+id+'_descavarias_wrap" style="display:none; margin-top:10px">'
+      + fieldWrap("Descreva as avarias (local, tamanho, tipo)", true, textareaInput(id+"_descavarias"), "full", id+"_descavarias_err")
+    + '</div>'
+    + fieldWrap("Fotos do veículo (mín. 3 — frente, traseira, lateral/avarias)", true, photoUploader(id+"_fotos", 3), "full")
+    + '<div class="section-title">Assinaturas (nome legível)</div>'
+    + '<div class="grid cols-2">'
+      + fieldWrap("Nome legível do cliente/fornecedor", true, textInput(id+"_nomecliente"), "", id+"_nomecliente_err")
+      + fieldWrap("Nome legível do avaliador Piratruck", true, textInput(id+"_nomeavaliador"), "", id+"_nomeavaliador_err")
+    + '</div>'
+    + '<div class="btn-row"><button class="btn btn-primary" onclick="saveCompra()">💾 Salvar checklist de compra</button>'
+    + '<button class="btn" onclick="renderCompraTab()">🔄 Limpar formulário</button></div>'
+    + '</div>';
+
+  window["onTypeChange_"+id+"_tipo"] = function(key){ reloadChecklistFor(id+"_checklist", key); };
+  window["onRadio_"+id+"_possuiavarias"] = function(val){
+    byId(id+"_descavarias_wrap").style.display = (val==="Sim") ? "block" : "none";
+  };
+}
+function saveCompra(){
+  const id = "compra";
+  let ok = true;
+  ok = requireText(id+"_operador") && ok;
+  ok = requireText(id+"_data") && ok;
+  ok = requireRadio(id+"_situacao") && ok;
+  ok = requireVehicleType(id+"_tipo") && ok;
+  const placaChassiOk = requireOneOf([id+"_placa", id+"_chassi"]); ok = placaChassiOk && ok;
+  ok = requireText(id+"_marca") && ok;
+  ok = requireText(id+"_modelo") && ok;
+  ok = requireText(id+"_ano") && ok;
+  ok = requireText(id+"_km") && ok;
+  ok = requireText(id+"_cor") && ok;
+  ok = requireRadio(id+"_docentregue") && ok;
+  ok = requireText(id+"_cliente") && ok;
+  ok = requireText(id+"_clientedoc") && ok;
+  ok = requireText(id+"_tel") && ok;
+  ok = requireText(id+"_motorista") && ok;
+  ok = validateChecklist(id+"_checklist", id+"_checklist_err") && ok;
+  ok = requireRadio(id+"_possuiavarias") && ok;
+  if(getRadioValue(id+"_possuiavarias")==="Sim"){ ok = requireText(id+"_descavarias") && ok; }
+  ok = validatePhotos(id+"_fotos", 3) && ok;
+  ok = requireText(id+"_nomecliente") && ok;
+  ok = requireText(id+"_nomeavaliador") && ok;
+
+  if(!ok){ showToast("Preencha todos os campos obrigatórios destacados em vermelho.","err"); return; }
+
+  const now = nowLocalISO();
+  const record = {
+    tag: "compra",
+    operador: byId(id+"_operador").value.trim(),
+    dataCheck: byId(id+"_data").value,
+    situacao: getRadioValue(id+"_situacao"),
+    tipoVeiculo: getVehicleTypeValue(id+"_tipo"),
+    tipoVeiculoLabel: VEHICLE_TYPES[getVehicleTypeValue(id+"_tipo")].label,
+    placa: byId(id+"_placa").value.trim().toUpperCase(),
+    chassi: byId(id+"_chassi").value.trim().toUpperCase(),
+    marca: byId(id+"_marca").value.trim(),
+    modelo: byId(id+"_modelo").value.trim(),
+    anoFabMod: byId(id+"_ano").value.trim(),
+    km: byId(id+"_km").value.trim(),
+    cor: byId(id+"_cor").value.trim(),
+    docEntregue: getRadioValue(id+"_docentregue"),
+    cliente: byId(id+"_cliente").value.trim(),
+    clienteDoc: byId(id+"_clientedoc").value.trim(),
+    clienteRg: byId(id+"_clienterg").value.trim(),
+    tel: byId(id+"_tel").value.trim(),
+    motorista: byId(id+"_motorista").value.trim(),
+    checklist: checklistState[id+"_checklist"],
+    possuiAvarias: getRadioValue(id+"_possuiavarias"),
+    descAvarias: byId(id+"_descavarias").value.trim(),
+    fotos: photoState[id+"_fotos"],
+    nomeCliente: byId(id+"_nomecliente").value.trim(),
+    nomeAvaliador: byId(id+"_nomeavaliador").value.trim(),
+    status: "concluido",
+    criadoPor: byId(id+"_operador").value.trim(),
+    criadoEm: now,
+    atualizadoEm: now,
+    historico: [ { data: now, autor: byId(id+"_operador").value.trim(), acao: "Checklist de compra criado.", detalhes: "" } ]
+  };
+  persistRecord(record).then(function(){
+    showToast("Checklist de compra salvo com sucesso!","ok");
+    renderCompraTab();
+    renderHistorico();
+  });
+}
+
+/* ================= ABA 2 — MANUTENÇÃO (entrada) ================= */
+function renderManutencaoTab(){
+  const id = "manut";
+  byId("panel-manutencao").innerHTML =
+    '<div class="banner banner-info">🔧 Registre a <b>entrada</b> do veículo/implemento que chega para manutenção, com checklist documental e físico completo. Depois, quando ele sair da oficina, abra o registro no <b>Histórico</b> e clique em "Registrar saída da manutenção" para completar (isso fica salvo como continuação do mesmo veículo).</div>'
+    + '<div class="card">'
+    + '<h2>Entrada para manutenção</h2>'
+    + '<div class="grid">'
+      + fieldWrap("Seu nome (quem está preenchendo)", true, textInput(id+"_operador",{value: state.currentUser}), "", id+"_operador_err")
+      + fieldWrap("Data de chegada", true, textInput(id+"_data",{type:"date", value: todayISO()}), "", id+"_data_err")
+      + fieldWrap("Previsão de conclusão", false, textInput(id+"_previsao",{type:"date"}))
+    + '</div>'
+    + '<div class="section-title">Tipo de veículo / implemento</div>'
+    + fieldWrap("Selecione o tipo (carrega os itens certos do checklist)", true, vehicleTypePicker(id+"_tipo", null), "full", id+"_tipo_err")
+    + '<div class="section-title">Dados do veículo</div>'
+    + '<div class="grid">'
+      + fieldWrap("Placa", false, textInput(id+"_placa"), "", "", "Preencha Placa ou Chassi")
+      + fieldWrap("Chassi", false, textInput(id+"_chassi"))
+      + fieldWrap("Marca", true, textInput(id+"_marca"), "", id+"_marca_err")
+      + fieldWrap("Modelo", true, textInput(id+"_modelo"), "", id+"_modelo_err")
+      + fieldWrap("Ano Fab/Mod", true, textInput(id+"_ano"), "", id+"_ano_err")
+      + fieldWrap("KM / Horímetro na entrada", true, textInput(id+"_km",{type:"number"}), "", id+"_km_err")
+      + fieldWrap("Cor", true, textInput(id+"_cor"), "", id+"_cor_err")
+    + '</div>'
+    + '<div class="section-title">Detalhes da manutenção</div>'
+    + '<div class="grid cols-2">'
+      + fieldWrap("Motivo da manutenção", true, textareaInput(id+"_motivo",{placeholder:"Ex: revisão, troca de peça, reparo elétrico..."}), "", id+"_motivo_err")
+      + fieldWrap("Oficina / Fornecedor responsável", true, textInput(id+"_oficina"), "", id+"_oficina_err")
+    + '</div>'
+    + '<div class="grid">'
+      + fieldWrap("Responsável pela entrega na oficina", true, textInput(id+"_responsavelentrega"), "", id+"_responsavelentrega_err")
+    + '</div>'
+    + '<div class="section-title">Checklist físico e documental (entrada)</div>'
+    + '<div id="'+id+'_checklist_wrap">'+checklistTable(id+"_checklist", [])+'</div>'
+    + '<div class="err-msg" id="'+id+'_checklist_err">Complete o checklist.</div>'
+    + fieldWrap("Fotos de entrada (mín. 3)", true, photoUploader(id+"_fotos", 3), "full")
+    + '<div class="btn-row"><button class="btn btn-primary" onclick="saveManutEntrada()">💾 Salvar entrada para manutenção</button>'
+    + '<button class="btn" onclick="renderManutencaoTab()">🔄 Limpar formulário</button></div>'
+    + '</div>';
+
+  window["onTypeChange_"+id+"_tipo"] = function(key){ reloadChecklistFor(id+"_checklist", key); };
+}
+function saveManutEntrada(){
+  const id = "manut";
+  let ok = true;
+  ok = requireText(id+"_operador") && ok;
+  ok = requireText(id+"_data") && ok;
+  ok = requireVehicleType(id+"_tipo") && ok;
+  ok = requireOneOf([id+"_placa", id+"_chassi"]) && ok;
+  ok = requireText(id+"_marca") && ok;
+  ok = requireText(id+"_modelo") && ok;
+  ok = requireText(id+"_ano") && ok;
+  ok = requireText(id+"_km") && ok;
+  ok = requireText(id+"_cor") && ok;
+  ok = requireText(id+"_motivo") && ok;
+  ok = requireText(id+"_oficina") && ok;
+  ok = requireText(id+"_responsavelentrega") && ok;
+  ok = validateChecklist(id+"_checklist", id+"_checklist_err") && ok;
+  ok = validatePhotos(id+"_fotos", 3) && ok;
+
+  if(!ok){ showToast("Preencha todos os campos obrigatórios destacados em vermelho.","err"); return; }
+
+  const now = nowLocalISO();
+  const operador = byId(id+"_operador").value.trim();
+  const record = {
+    tag: "manutencao",
+    fase: "entrada",
+    operador: operador,
+    dataChegada: byId(id+"_data").value,
+    previsaoConclusao: byId(id+"_previsao").value,
+    tipoVeiculo: getVehicleTypeValue(id+"_tipo"),
+    tipoVeiculoLabel: VEHICLE_TYPES[getVehicleTypeValue(id+"_tipo")].label,
+    placa: byId(id+"_placa").value.trim().toUpperCase(),
+    chassi: byId(id+"_chassi").value.trim().toUpperCase(),
+    marca: byId(id+"_marca").value.trim(),
+    modelo: byId(id+"_modelo").value.trim(),
+    anoFabMod: byId(id+"_ano").value.trim(),
+    km: byId(id+"_km").value.trim(),
+    cor: byId(id+"_cor").value.trim(),
+    motivoManutencao: byId(id+"_motivo").value.trim(),
+    oficina: byId(id+"_oficina").value.trim(),
+    responsavelEntrega: byId(id+"_responsavelentrega").value.trim(),
+    checklistEntrada: checklistState[id+"_checklist"],
+    fotosEntrada: photoState[id+"_fotos"],
+    status: "aberto",
+    criadoPor: operador,
+    criadoEm: now,
+    atualizadoEm: now,
+    historico: [ { data: now, autor: operador, acao: "Entrada para manutenção registrada.", detalhes: "Motivo: "+byId(id+"_motivo").value.trim() } ]
+  };
+  persistRecord(record).then(function(){
+    showToast("Entrada para manutenção salva!","ok");
+    renderManutencaoTab();
+    renderHistorico();
+  });
+}
+
+/* ---- Follow-up: saída da manutenção (via modal, a partir do Histórico) ---- */
+function openManutSaidaForm(recordId){
+  const r = state.records.find(x=>x.id===recordId);
+  if(!r) return;
+  const id = "manutsaida";
+  const html =
+    '<div class="modal-head"><h3>🔧 Registrar saída da manutenção — '+escapeHtml(r.placa||r.chassi)+'</h3><button class="modal-close" onclick="closeModal()">✕</button></div>'
+    + '<div class="modal-body">'
+    + '<div class="grid">'
+      + fieldWrap("Seu nome (quem está preenchendo)", true, textInput(id+"_operador",{value: state.currentUser}), "", id+"_operador_err")
+      + fieldWrap("Data de saída", true, textInput(id+"_data",{type:"date", value: todayISO()}), "", id+"_data_err")
+      + fieldWrap("KM / Horímetro na saída", true, textInput(id+"_km",{type:"number"}), "", id+"_km_err")
+    + '</div>'
+    + '<div class="grid cols-2">'
+      + fieldWrap("Serviços realizados", true, textareaInput(id+"_servicos"), "", id+"_servicos_err")
+      + fieldWrap("Peças trocadas", true, textInput(id+"_pecas",{placeholder:"Descreva ou digite 'Nenhuma'"}), "", id+"_pecas_err")
+    + '</div>'
+    + '<div class="grid">'
+      + fieldWrap("Custo total (R$)", true, textInput(id+"_custo",{type:"number", step:"0.01"}), "", id+"_custo_err")
+    + '</div>'
+    + '<div class="section-title">Checklist físico e documental (saída)</div>'
+    + '<div id="'+id+'_checklist_wrap">'+checklistTable(id+"_checklist", r.tipoVeiculo? VEHICLE_TYPES[r.tipoVeiculo].items : [])+'</div>'
+    + '<div class="err-msg" id="'+id+'_checklist_err">Complete o checklist.</div>'
+    + fieldWrap("Fotos de saída (mín. 3)", true, photoUploader(id+"_fotos", 3), "full")
+    + '</div>'
+    + '<div class="modal-foot"><button class="btn" onclick="closeModal()">Cancelar</button>'
+    + '<button class="btn btn-primary" onclick="saveManutSaida(\''+recordId+'\')">💾 Salvar saída da manutenção</button></div>';
+  openModal(html);
+}
+function saveManutSaida(recordId){
+  const id = "manutsaida";
+  let ok = true;
+  ok = requireText(id+"_operador") && ok;
+  ok = requireText(id+"_data") && ok;
+  ok = requireText(id+"_km") && ok;
+  ok = requireText(id+"_servicos") && ok;
+  ok = requireText(id+"_pecas") && ok;
+  ok = requireText(id+"_custo") && ok;
+  ok = validateChecklist(id+"_checklist", id+"_checklist_err") && ok;
+  ok = validatePhotos(id+"_fotos", 3) && ok;
+  if(!ok){ showToast("Preencha todos os campos obrigatórios destacados em vermelho.","err"); return; }
+
+  const r = state.records.find(x=>x.id===recordId);
+  const now = nowLocalISO();
+  const operador = byId(id+"_operador").value.trim();
+  r.dataSaida = byId(id+"_data").value;
+  r.kmSaida = byId(id+"_km").value.trim();
+  r.servicosRealizados = byId(id+"_servicos").value.trim();
+  r.pecasTrocadas = byId(id+"_pecas").value.trim();
+  r.custoTotal = byId(id+"_custo").value.trim();
+  r.checklistSaida = checklistState[id+"_checklist"];
+  r.fotosSaida = photoState[id+"_fotos"];
+  r.status = "concluido";
+  r.atualizadoEm = now;
+  r.atualizadoPor = operador;
+  r.historico.push({ data: now, autor: operador, acao: "Saída da manutenção registrada.", detalhes: "Serviços: "+r.servicosRealizados+" | Custo: R$ "+r.custoTotal });
+  persistRecord(r, true).then(function(){
+    showToast("Saída da manutenção registrada!","ok");
+    closeModal();
+    renderHistorico();
+  });
+}
+
+/* ================= ABA 3 — VEÍCULOS DA EMPRESA (uso interno) ================= */
+function renderEmpresaTab(){
+  const id = "empresa";
+  byId("panel-empresa").innerHTML =
+    '<div class="banner banner-info">🚚 Registre a <b>retirada</b> do veículo da empresa (quem vai usar, km de saída, combustível). Quando o veículo <b>voltar</b>, abra o registro no Histórico e clique em "Registrar devolução" para lançar km de chegada e se abasteceu.</div>'
+    + '<div class="card">'
+    + '<h2>Retirada do veículo</h2>'
+    + '<div class="grid">'
+      + fieldWrap("Seu nome (quem está preenchendo)", true, textInput(id+"_operador",{value: state.currentUser}), "", id+"_operador_err")
+      + fieldWrap("Placa do veículo", true, textInput(id+"_placa"), "", id+"_placa_err")
+      + fieldWrap("Modelo do veículo", true, textInput(id+"_modelo"), "", id+"_modelo_err")
+    + '</div>'
+    + '<div class="grid">'
+      + fieldWrap("Motorista / Colaborador que vai usar", true, textInput(id+"_motorista"), "", id+"_motorista_err")
+      + fieldWrap("Data/hora de saída", true, textInput(id+"_datasaida",{type:"datetime-local", value: nowLocalISO()}), "", id+"_datasaida_err")
+      + fieldWrap("Destino / Motivo", true, textInput(id+"_destino"), "", id+"_destino_err")
+    + '</div>'
+    + '<div class="grid">'
+      + fieldWrap("KM ao sair", true, textInput(id+"_kmsaida",{type:"number"}), "", id+"_kmsaida_err")
+      + fieldWrap("Nível de combustível ao sair", true, selectInput(id+"_combsaida", ["Reserva","1/4","1/2","3/4","Cheio"]), "", id+"_combsaida_err")
+      + fieldWrap("Abasteceu antes de sair?", true, radioGroup(id+"_abasteceusaida", ["Sim","Não"]), "", id+"_abasteceusaida_err")
+    + '</div>'
+    + '<div id="'+id+'_valorabastsaida_wrap" style="display:none">'
+      + '<div class="grid">' + fieldWrap("Valor abastecido (R$)", true, textInput(id+"_valorabastsaida",{type:"number", step:"0.01"}), "", id+"_valorabastsaida_err") + '</div>'
+    + '</div>'
+    + '<div class="section-title">Checklist rápido de saída</div>'
+    + '<div id="'+id+'_checklist_wrap">'+checklistTable(id+"_checklist", QUICK_CHECK_ITEMS)+'</div>'
+    + '<div class="err-msg" id="'+id+'_checklist_err">Complete o checklist.</div>'
+    + fieldWrap("Foto do veículo/painel (km) ao sair", true, photoUploader(id+"_fotos", 1), "full")
+    + '<div class="btn-row"><button class="btn btn-primary" onclick="saveEmpresaRetirada()">💾 Salvar retirada</button>'
+    + '<button class="btn" onclick="renderEmpresaTab()">🔄 Limpar formulário</button></div>'
+    + '</div>';
+
+  window["onRadio_"+id+"_abasteceusaida"] = function(val){
+    byId(id+"_valorabastsaida_wrap").style.display = (val==="Sim") ? "block" : "none";
+  };
+}
+function saveEmpresaRetirada(){
+  const id = "empresa";
+  let ok = true;
+  ok = requireText(id+"_operador") && ok;
+  ok = requireText(id+"_placa") && ok;
+  ok = requireText(id+"_modelo") && ok;
+  ok = requireText(id+"_motorista") && ok;
+  ok = requireText(id+"_datasaida") && ok;
+  ok = requireText(id+"_destino") && ok;
+  ok = requireText(id+"_kmsaida") && ok;
+  ok = requireText(id+"_combsaida") && ok;
+  ok = requireRadio(id+"_abasteceusaida") && ok;
+  if(getRadioValue(id+"_abasteceusaida")==="Sim"){ ok = requireText(id+"_valorabastsaida") && ok; }
+  ok = validateChecklist(id+"_checklist", id+"_checklist_err") && ok;
+  ok = validatePhotos(id+"_fotos", 1) && ok;
+  if(!ok){ showToast("Preencha todos os campos obrigatórios destacados em vermelho.","err"); return; }
+
+  const now = nowLocalISO();
+  const operador = byId(id+"_operador").value.trim();
+  const record = {
+    tag: "empresa",
+    operador: operador,
+    placa: byId(id+"_placa").value.trim().toUpperCase(),
+    modelo: byId(id+"_modelo").value.trim(),
+    motorista: byId(id+"_motorista").value.trim(),
+    dataSaida: byId(id+"_datasaida").value,
+    destino: byId(id+"_destino").value.trim(),
+    kmSaida: byId(id+"_kmsaida").value.trim(),
+    combustivelSaida: byId(id+"_combsaida").value,
+    abasteceuSaida: getRadioValue(id+"_abasteceusaida"),
+    valorAbastSaida: byId(id+"_valorabastsaida").value.trim(),
+    checklistSaida: checklistState[id+"_checklist"],
+    fotosSaida: photoState[id+"_fotos"],
+    status: "em_uso",
+    criadoPor: operador,
+    criadoEm: now,
+    atualizadoEm: now,
+    historico: [ { data: now, autor: operador, acao: "Retirada registrada.", detalhes: "Destino: "+byId(id+"_destino").value.trim()+" | KM saída: "+byId(id+"_kmsaida").value.trim() } ]
+  };
+  persistRecord(record).then(function(){
+    showToast("Retirada do veículo registrada!","ok");
+    renderEmpresaTab();
+    renderHistorico();
+  });
+}
+function openEmpresaDevolucaoForm(recordId){
+  const r = state.records.find(x=>x.id===recordId);
+  if(!r) return;
+  const id = "empresadev";
+  const html =
+    '<div class="modal-head"><h3>🚚 Registrar devolução — '+escapeHtml(r.placa)+'</h3><button class="modal-close" onclick="closeModal()">✕</button></div>'
+    + '<div class="modal-body">'
+    + '<div class="banner banner-info" style="margin-bottom:14px">KM na saída: <b>'+escapeHtml(r.kmSaida)+'</b></div>'
+    + '<div class="grid">'
+      + fieldWrap("Seu nome (quem está preenchendo)", true, textInput(id+"_operador",{value: state.currentUser}), "", id+"_operador_err")
+      + fieldWrap("Data/hora de retorno", true, textInput(id+"_dataretorno",{type:"datetime-local", value: nowLocalISO()}), "", id+"_dataretorno_err")
+      + fieldWrap("KM ao chegar", true, textInput(id+"_kmchegada",{type:"number"}), "", id+"_kmchegada_err")
+    + '</div>'
+    + '<div class="grid">'
+      + fieldWrap("Nível de combustível ao chegar", true, selectInput(id+"_combchegada", ["Reserva","1/4","1/2","3/4","Cheio"]), "", id+"_combchegada_err")
+      + fieldWrap("Abasteceu durante o uso?", true, radioGroup(id+"_abasteceuchegada", ["Sim","Não"]), "", id+"_abasteceuchegada_err")
+    + '</div>'
+    + '<div id="'+id+'_valorabast_wrap" style="display:none">'
+      + '<div class="grid">' + fieldWrap("Valor abastecido (R$)", true, textInput(id+"_valorabast",{type:"number", step:"0.01"}), "", id+"_valorabast_err") + '</div>'
+    + '</div>'
+    + fieldWrap("Observações / avarias no retorno", true, textareaInput(id+"_obs",{placeholder:"Descreva ou digite 'Nenhuma'"}), "full", id+"_obs_err")
+    + fieldWrap("Foto do veículo/painel (km) ao chegar", true, photoUploader(id+"_fotos", 1), "full")
+    + '</div>'
+    + '<div class="modal-foot"><button class="btn" onclick="closeModal()">Cancelar</button>'
+    + '<button class="btn btn-primary" onclick="saveEmpresaDevolucao(\''+recordId+'\')">💾 Salvar devolução</button></div>';
+  openModal(html);
+
+  window["onRadio_"+id+"_abasteceuchegada"] = function(val){
+    byId(id+"_valorabast_wrap").style.display = (val==="Sim") ? "block" : "none";
+  };
+}
+function saveEmpresaDevolucao(recordId){
+  const id = "empresadev";
+  const r = state.records.find(x=>x.id===recordId);
+  let ok = true;
+  ok = requireText(id+"_operador") && ok;
+  ok = requireText(id+"_dataretorno") && ok;
+  ok = requireText(id+"_kmchegada") && ok;
+  ok = requireText(id+"_combchegada") && ok;
+  ok = requireRadio(id+"_abasteceuchegada") && ok;
+  if(getRadioValue(id+"_abasteceuchegada")==="Sim"){ ok = requireText(id+"_valorabast") && ok; }
+  ok = requireText(id+"_obs") && ok;
+  ok = validatePhotos(id+"_fotos", 1) && ok;
+  const kmChegada = parseFloat(byId(id+"_kmchegada").value);
+  const kmSaida = parseFloat(r.kmSaida);
+  if(!isNaN(kmChegada) && !isNaN(kmSaida) && kmChegada < kmSaida){
+    byId(id+"_kmchegada").classList.add("err");
+    showToast("O KM de chegada não pode ser menor que o KM de saída ("+kmSaida+").","err");
+    ok = false;
+  }
+  if(!ok){ if(byId(id+"_kmchegada").classList.contains("err")===false) showToast("Preencha todos os campos obrigatórios destacados em vermelho.","err"); return; }
+
+  const now = nowLocalISO();
+  const operador = byId(id+"_operador").value.trim();
+  r.dataRetorno = byId(id+"_dataretorno").value;
+  r.kmChegada = byId(id+"_kmchegada").value.trim();
+  r.kmRodado = (kmChegada - kmSaida);
+  r.combustivelChegada = byId(id+"_combchegada").value;
+  r.abasteceuChegada = getRadioValue(id+"_abasteceuchegada");
+  r.valorAbastChegada = byId(id+"_valorabast").value.trim();
+  r.obsRetorno = byId(id+"_obs").value.trim();
+  r.fotosChegada = photoState[id+"_fotos"];
+  r.status = "concluido";
+  r.atualizadoEm = now;
+  r.atualizadoPor = operador;
+  r.historico.push({ data: now, autor: operador, acao: "Devolução registrada.", detalhes: "KM chegada: "+r.kmChegada+" (rodou "+r.kmRodado+" km) | Abasteceu: "+r.abasteceuChegada });
+  persistRecord(r, true).then(function(){
+    showToast("Devolução registrada!","ok");
+    closeModal();
+    renderHistorico();
+  });
+}
+
+/* ================= ABA 4 — MANUTENÇÃO PRÉ-VENDA (seminovos) ================= */
+function renderPrevendaTab(){
+  const id = "prevenda";
+  byId("panel-prevenda").innerHTML =
+    '<div class="banner banner-info">✅ Registre a manutenção/preparação realizada em veículos seminovos antes da venda, com o checklist final de inspeção.</div>'
+    + '<div class="card">'
+    + '<h2>Manutenção pré-venda</h2>'
+    + '<div class="grid">'
+      + fieldWrap("Seu nome (quem está preenchendo)", true, textInput(id+"_operador",{value: state.currentUser}), "", id+"_operador_err")
+    + '</div>'
+    + '<div class="section-title">Tipo de veículo / implemento</div>'
+    + fieldWrap("Selecione o tipo (carrega os itens certos do checklist)", true, vehicleTypePicker(id+"_tipo", null), "full", id+"_tipo_err")
+    + '<div class="section-title">Dados do veículo</div>'
+    + '<div class="grid">'
+      + fieldWrap("Placa", false, textInput(id+"_placa"), "", "", "Preencha Placa ou Chassi")
+      + fieldWrap("Chassi", false, textInput(id+"_chassi"))
+      + fieldWrap("Marca", true, textInput(id+"_marca"), "", id+"_marca_err")
+      + fieldWrap("Modelo", true, textInput(id+"_modelo"), "", id+"_modelo_err")
+      + fieldWrap("Ano Fab/Mod", true, textInput(id+"_ano"), "", id+"_ano_err")
+      + fieldWrap("KM", true, textInput(id+"_km",{type:"number"}), "", id+"_km_err")
+      + fieldWrap("Cor", true, textInput(id+"_cor"), "", id+"_cor_err")
+    + '</div>'
+    + '<div class="section-title">Serviço realizado</div>'
+    + '<div class="grid cols-2">'
+      + fieldWrap("Serviços/reparos realizados", true, textareaInput(id+"_servicos"), "", id+"_servicos_err")
+      + fieldWrap("Peças trocadas", true, textInput(id+"_pecas",{placeholder:"Descreva ou digite 'Nenhuma'"}), "", id+"_pecas_err")
+    + '</div>'
+    + '<div class="grid">'
+      + fieldWrap("Oficina / Mecânico responsável", true, textInput(id+"_oficina"), "", id+"_oficina_err")
+      + fieldWrap("Data início do serviço", true, textInput(id+"_datainicio",{type:"date"}), "", id+"_datainicio_err")
+      + fieldWrap("Data conclusão do serviço", true, textInput(id+"_dataconclusao",{type:"date", value: todayISO()}), "", id+"_dataconclusao_err")
+      + fieldWrap("Custo total (R$)", true, textInput(id+"_custo",{type:"number", step:"0.01"}), "", id+"_custo_err")
+    + '</div>'
+    + '<div class="section-title">Checklist final de inspeção (antes da venda)</div>'
+    + '<div id="'+id+'_checklist_wrap">'+checklistTable(id+"_checklist", [])+'</div>'
+    + '<div class="err-msg" id="'+id+'_checklist_err">Complete o checklist.</div>'
+    + '<div class="section-title">Fotos</div>'
+    + '<div class="grid cols-2">'
+      + fieldWrap("Fotos ANTES do serviço (mín. 2)", true, photoUploader(id+"_fotosantes", 2), "")
+      + fieldWrap("Fotos DEPOIS do serviço (mín. 2)", true, photoUploader(id+"_fotosdepois", 2), "")
+    + '</div>'
+    + '<div class="section-title">Aprovação para venda</div>'
+    + '<div class="grid">'
+      + fieldWrap("Aprovado para venda?", true, radioGroup(id+"_aprovado", ["Sim","Não"]), "", id+"_aprovado_err")
+    + '</div>'
+    + '<div id="'+id+'_motivo_wrap" style="display:none; margin-top:10px">'
+      + fieldWrap("Motivo / pendências", true, textareaInput(id+"_motivoreprova"), "full", id+"_motivoreprova_err")
+    + '</div>'
+    + '<div class="btn-row"><button class="btn btn-primary" onclick="savePrevenda()">💾 Salvar manutenção pré-venda</button>'
+    + '<button class="btn" onclick="renderPrevendaTab()">🔄 Limpar formulário</button></div>'
+    + '</div>';
+
+  window["onTypeChange_"+id+"_tipo"] = function(key){ reloadChecklistFor(id+"_checklist", key); };
+  window["onRadio_"+id+"_aprovado"] = function(val){
+    byId(id+"_motivo_wrap").style.display = (val==="Não") ? "block" : "none";
+  };
+}
+function savePrevenda(){
+  const id = "prevenda";
+  let ok = true;
+  ok = requireText(id+"_operador") && ok;
+  ok = requireVehicleType(id+"_tipo") && ok;
+  ok = requireOneOf([id+"_placa", id+"_chassi"]) && ok;
+  ok = requireText(id+"_marca") && ok;
+  ok = requireText(id+"_modelo") && ok;
+  ok = requireText(id+"_ano") && ok;
+  ok = requireText(id+"_km") && ok;
+  ok = requireText(id+"_cor") && ok;
+  ok = requireText(id+"_servicos") && ok;
+  ok = requireText(id+"_pecas") && ok;
+  ok = requireText(id+"_oficina") && ok;
+  ok = requireText(id+"_datainicio") && ok;
+  ok = requireText(id+"_dataconclusao") && ok;
+  ok = requireText(id+"_custo") && ok;
+  ok = validateChecklist(id+"_checklist", id+"_checklist_err") && ok;
+  ok = validatePhotos(id+"_fotosantes", 2) && ok;
+  ok = validatePhotos(id+"_fotosdepois", 2) && ok;
+  ok = requireRadio(id+"_aprovado") && ok;
+  if(getRadioValue(id+"_aprovado")==="Não"){ ok = requireText(id+"_motivoreprova") && ok; }
+  if(!ok){ showToast("Preencha todos os campos obrigatórios destacados em vermelho.","err"); return; }
+
+  const now = nowLocalISO();
+  const operador = byId(id+"_operador").value.trim();
+  const record = {
+    tag: "prevenda",
+    operador: operador,
+    tipoVeiculo: getVehicleTypeValue(id+"_tipo"),
+    tipoVeiculoLabel: VEHICLE_TYPES[getVehicleTypeValue(id+"_tipo")].label,
+    placa: byId(id+"_placa").value.trim().toUpperCase(),
+    chassi: byId(id+"_chassi").value.trim().toUpperCase(),
+    marca: byId(id+"_marca").value.trim(),
+    modelo: byId(id+"_modelo").value.trim(),
+    anoFabMod: byId(id+"_ano").value.trim(),
+    km: byId(id+"_km").value.trim(),
+    cor: byId(id+"_cor").value.trim(),
+    servicosRealizados: byId(id+"_servicos").value.trim(),
+    pecasTrocadas: byId(id+"_pecas").value.trim(),
+    oficina: byId(id+"_oficina").value.trim(),
+    dataInicio: byId(id+"_datainicio").value,
+    dataConclusao: byId(id+"_dataconclusao").value,
+    custoTotal: byId(id+"_custo").value.trim(),
+    checklist: checklistState[id+"_checklist"],
+    fotosAntes: photoState[id+"_fotosantes"],
+    fotosDepois: photoState[id+"_fotosdepois"],
+    aprovadoVenda: getRadioValue(id+"_aprovado"),
+    motivoReprova: byId(id+"_motivoreprova").value.trim(),
+    status: "concluido",
+    criadoPor: operador,
+    criadoEm: now,
+    atualizadoEm: now,
+    historico: [ { data: now, autor: operador, acao: "Manutenção pré-venda registrada.", detalhes: "Serviços: "+byId(id+"_servicos").value.trim() } ]
+  };
+  persistRecord(record).then(function(){
+    showToast("Manutenção pré-venda salva!","ok");
+    renderPrevendaTab();
+    renderHistorico();
+  });
+}
+
+/* ================= Persistência (Firestore online OU memória local) ================= */
+function persistRecord(record, isUpdate){
+  return new Promise(function(resolve, reject){
+    if(fbDb){
+      const col = fbDb.collection("checklist_veiculos");
+      const p = (isUpdate && record.id) ? col.doc(record.id).set(record, {merge:true}) : col.add(record).then(function(ref){ record.id = ref.id; });
+      p.then(function(){
+        if(!isUpdate){ /* onSnapshot cuidará de popular state.records */ }
+        resolve();
+      }).catch(function(err){ showToast("Erro ao salvar online: "+err.message,"err"); reject(err); });
+    } else {
+      if(!record.id) record.id = uid();
+      const idx = state.records.findIndex(function(r){ return r.id===record.id; });
+      if(idx>=0) state.records[idx] = record; else state.records.unshift(record);
+      resolve();
+    }
+  });
+}
+function deleteRecord(recordId){
+  if(!confirm("Tem certeza que deseja excluir este registro? Essa ação não pode ser desfeita.")) return;
+  if(fbDb){
+    fbDb.collection("checklist_veiculos").doc(recordId).delete().then(function(){
+      showToast("Registro excluído.","ok");
+      closeModal();
+    }).catch(function(err){ showToast("Erro ao excluir: "+err.message,"err"); });
+  } else {
+    state.records = state.records.filter(function(r){ return r.id!==recordId; });
+    showToast("Registro excluído.","ok");
+    closeModal();
+    renderHistorico();
+  }
+}
+
+/* ---- Adicionar atualização genérica (append-only, mantém tudo que já foi salvo) ---- */
+function openAppendForm(recordId){
+  const id = "append";
+  const html =
+    '<div class="modal-head"><h3>➕ Adicionar informação a este registro</h3><button class="modal-close" onclick="closeModal()">✕</button></div>'
+    + '<div class="modal-body">'
+    + '<div class="banner banner-ok">As informações já salvas neste veículo <b>não são apagadas</b> — isso apenas acrescenta uma nova entrada ao histórico dele.</div>'
+    + '<div class="grid">'
+      + fieldWrap("Seu nome", true, textInput(id+"_autor",{value: state.currentUser}), "", id+"_autor_err")
+      + fieldWrap("Data", true, textInput(id+"_data",{type:"date", value: todayISO()}), "", id+"_data_err")
+    + '</div>'
+    + fieldWrap("O que está sendo adicionado / observação", true, textareaInput(id+"_desc"), "full", id+"_desc_err")
+    + fieldWrap("Fotos (opcional)", false, photoUploader(id+"_fotos", 0), "full")
+    + '</div>'
+    + '<div class="modal-foot"><button class="btn" onclick="closeModal()">Cancelar</button>'
+    + '<button class="btn btn-primary" onclick="saveAppend(\''+recordId+'\')">💾 Adicionar</button></div>';
+  openModal(html);
+}
+function saveAppend(recordId){
+  const id = "append";
+  let ok = true;
+  ok = requireText(id+"_autor") && ok;
+  ok = requireText(id+"_data") && ok;
+  ok = requireText(id+"_desc") && ok;
+  if(!ok){ showToast("Preencha todos os campos obrigatórios destacados em vermelho.","err"); return; }
+  const r = state.records.find(function(x){ return x.id===recordId; });
+  if(!r) return;
+  const now = nowLocalISO();
+  const autor = byId(id+"_autor").value.trim();
+  const entry = { data: now, autor: autor, acao: "Atualização adicionada.", detalhes: byId(id+"_desc").value.trim() };
+  const fotos = photoState[id+"_fotos"]||[];
+  if(fotos.length){ entry.fotos = fotos; }
+  r.historico.push(entry);
+  r.atualizadoEm = now;
+  r.atualizadoPor = autor;
+  persistRecord(r, true).then(function(){
+    showToast("Atualização adicionada ao histórico do veículo!","ok");
+    closeModal();
+    renderHistorico();
+  });
+}
+
+/* ================= HISTÓRICO ================= */
+function recordPrimaryDate(r){
+  const d = r.dataCheck || r.dataChegada || (r.dataSaida && r.tag!=="empresa" ? r.dataSaida : null) || (r.dataSaida ? String(r.dataSaida).slice(0,10) : null) || r.dataInicio || (r.criadoEm ? String(r.criadoEm).slice(0,10) : todayISO());
+  return String(d).slice(0,10);
+}
+function recordTitle(r){
+  if(r.tag==="empresa") return (r.placa||"—") + " · " + (r.modelo||"");
+  return (r.placa || r.chassi || "—") + " · " + (r.tipoVeiculoLabel||"") ;
+}
+function recordStatusLabel(r){
+  if(r.tag==="manutencao") return r.status==="aberto" ? "Em manutenção" : "Concluído";
+  if(r.tag==="empresa") return r.status==="em_uso" ? "Em uso" : "Devolvido";
+  return "Concluído";
+}
+function renderSettings(){
+  // placeholder called at boot; actual content set in HTML + wireSettings()
+}
+function getHistoricoFilters(){
+  return {
+    tag: byId("f-tag") ? byId("f-tag").value : "",
+    tipo: byId("f-tipo") ? byId("f-tipo").value : "",
+    busca: byId("f-busca") ? byId("f-busca").value.trim().toLowerCase() : "",
+    de: byId("f-de") ? byId("f-de").value : "",
+    ate: byId("f-ate") ? byId("f-ate").value : "",
+    operador: byId("f-operador") ? byId("f-operador").value.trim().toLowerCase() : ""
+  };
+}
+function matchesFilters(r, f){
+  if(f.tag && r.tag!==f.tag) return false;
+  if(f.tipo && r.tipoVeiculo!==f.tipo) return false;
+  const day = recordPrimaryDate(r);
+  if(f.de && day < f.de) return false;
+  if(f.ate && day > f.ate) return false;
+  if(f.operador && !(String(r.criadoPor||"").toLowerCase().includes(f.operador))) return false;
+  if(f.busca){
+    const hay = [r.placa, r.chassi, r.marca, r.modelo, r.cliente, r.motorista, r.criadoPor].join(" ").toLowerCase();
+    if(!hay.includes(f.busca)) return false;
+  }
+  return true;
+}
+function renderHistoricoFiltersBar(){
+  const typeOptions = Object.keys(VEHICLE_TYPES).map(function(k){ return '<option value="'+k+'">'+escapeHtml(VEHICLE_TYPES[k].label)+'</option>'; }).join("");
+  return '<div class="card"><div class="filters-bar">'
+    + '<div class="field"><label>Categoria</label><select id="f-tag" onchange="renderHistorico()"><option value="">Todas</option>'
+      + '<option value="compra">Compra de Veículo</option><option value="manutencao">Manutenção</option>'
+      + '<option value="empresa">Veículo da Empresa</option><option value="prevenda">Manutenção Pré-venda</option></select></div>'
+    + '<div class="field"><label>Tipo de veículo</label><select id="f-tipo" onchange="renderHistorico()"><option value="">Todos</option>'+typeOptions+'</select></div>'
+    + '<div class="field"><label>De</label><input type="date" id="f-de" onchange="renderHistorico()"></div>'
+    + '<div class="field"><label>Até</label><input type="date" id="f-ate" onchange="renderHistorico()"></div>'
+    + '<div class="field"><label>Operador</label><input type="text" id="f-operador" placeholder="nome..." oninput="renderHistorico()"></div>'
+    + '<div class="field"><label>Buscar (placa, marca, cliente...)</label><input type="text" id="f-busca" placeholder="Buscar..." oninput="renderHistorico()"></div>'
+    + '<button class="btn btn-sm" onclick="clearHistoricoFilters()">✕ Limpar filtros</button>'
+    + '</div></div>';
+}
+function clearHistoricoFilters(){
+  ["f-tag","f-tipo","f-de","f-ate","f-operador","f-busca"].forEach(function(id){ if(byId(id)) byId(id).value=""; });
+  renderHistorico();
+}
+function renderHistorico(){
+  const panel = byId("panel-historico");
+  const scrollBox = byId("historico-list");
+  const filtersHtml = renderHistoricoFiltersBar();
+  const topBar = '<div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">'
+    + '<div><b>'+state.records.length+'</b> registro(s) no total. '+(fbDb? '🟢 sincronizado online.' : '🔴 modo local — use os botões abaixo para não perder dados.')+'</div>'
+    + '<div style="display:flex; gap:8px; flex-wrap:wrap">'
+      + '<button class="btn btn-sm" onclick="exportJson()">⬇️ Exportar backup (.json)</button>'
+      + '<button class="btn btn-sm" onclick="byId(\'import-json-input\').click()">⬆️ Importar backup (.json)</button>'
+      + '<input type="file" id="import-json-input" accept="application/json" style="display:none" onchange="importJsonFile(this.files[0])">'
+    + '</div></div>';
+
+  const f = getHistoricoFilters();
+  const recs = state.records.filter(function(r){ return matchesFilters(r, f); });
+
+  let listHtml;
+  if(!recs.length){
+    listHtml = '<div class="empty-state"><div class="big">🗂️</div><p>Nenhum registro encontrado'+(state.records.length? ' com esses filtros.' : ' ainda. Preencha um checklist em alguma das abas.')+'</p></div>';
+  } else {
+    const groups = {};
+    recs.forEach(function(r){ const d = recordPrimaryDate(r); (groups[d]=groups[d]||[]).push(r); });
+    const days = Object.keys(groups).sort().reverse();
+    listHtml = days.map(function(d){
+      const items = groups[d].sort(function(a,b){ return String(b.criadoEm||"").localeCompare(String(a.criadoEm||"")); });
+      return '<div class="day-group">'
+        + '<div class="day-heading">📅 '+fmtDateBR(d)+' <span class="count">'+items.length+' registro(s)</span>'
+        + '<button class="btn btn-sm no-print" style="margin-left:auto" onclick="exportDayPdf(\''+d+'\')">🖨️ Exportar PDF do dia</button></div>'
+        + items.map(recordCardHtml).join("")
+        + '</div>';
+    }).join("");
+  }
+  if(panel){
+    panel.innerHTML = filtersHtml + topBar + '<div id="historico-list"></div>';
+    byId("historico-list").innerHTML = listHtml;
+    // restore filter values (they got wiped by innerHTML replace of filtersHtml above, so re-apply)
+  }
+}
+function recordCardHtml(r){
+  return '<div class="record-card" onclick="openRecordDetail(\''+r.id+'\')">'
+    + '<div class="rc-main">'
+    + '<span class="rc-tag '+TAG_CLASS[r.tag]+'">'+TAG_LABEL[r.tag]+'</span>'
+    + '<div class="rc-title">'+escapeHtml(recordTitle(r))+'</div>'
+    + '<div class="rc-sub">Por '+escapeHtml(r.criadoPor||"—")+' em '+fmtDateTimeBR(r.criadoEm)+'</div>'
+    + '</div>'
+    + '<div class="rc-status status-'+(r.status==="aberto"||r.status==="em_uso"?"aberto":"concluido")+'">'+recordStatusLabel(r)+'</div>'
+    + '</div>';
+}
+
+/* ---- Detalhe do registro (modal) ---- */
+function detailField(k,v){ return '<div class="detail-item"><div class="k">'+escapeHtml(k)+'</div><div class="v">'+escapeHtml(v==null||v===""?"—":v)+'</div></div>'; }
+function checklistDetailTable(items){
+  if(!items || !items.length) return "";
+  return '<table class="checklist-table"><thead><tr><th>Item</th><th>Status</th><th>Obs.</th></tr></thead><tbody>'
+    + items.map(function(r){ return '<tr><td class="checklist-item-name">'+escapeHtml(r.item)+'</td><td>'+escapeHtml(r.status||"—")+'</td><td>'+escapeHtml(r.obs||"")+'</td></tr>'; }).join("")
+    + '</tbody></table>';
+}
+function photosDetailGrid(fotos){
+  if(!fotos || !fotos.length) return '<p class="hint">Sem fotos.</p>';
+  return '<div class="photo-grid">'+fotos.map(function(p){ return '<div class="photo-thumb"><img src="'+p.dataUrl+'"></div>'; }).join("")+'</div>';
+}
+function openRecordDetail(recordId){
+  const r = state.records.find(function(x){ return x.id===recordId; });
+  if(!r) return;
+  let body = '<div class="detail-grid">';
+  body += detailField("Categoria", TAG_LABEL[r.tag]);
+  body += detailField("Status", recordStatusLabel(r));
+  body += detailField("Operador (quem adicionou)", r.criadoPor);
+  body += detailField("Criado em", fmtDateTimeBR(r.criadoEm));
+  if(r.atualizadoPor) body += detailField("Última atualização por", r.atualizadoPor + " em " + fmtDateTimeBR(r.atualizadoEm));
+  if(r.tipoVeiculoLabel) body += detailField("Tipo de veículo/implemento", r.tipoVeiculoLabel);
+  if(r.placa) body += detailField("Placa", r.placa);
+  if(r.chassi) body += detailField("Chassi", r.chassi);
+  if(r.marca) body += detailField("Marca", r.marca);
+  if(r.modelo) body += detailField("Modelo", r.modelo);
+  if(r.anoFabMod) body += detailField("Ano Fab/Mod", r.anoFabMod);
+  if(r.cor) body += detailField("Cor", r.cor);
+  body += '</div>';
+
+  if(r.tag==="compra"){
+    body += '<div class="detail-grid">'
+      + detailField("Situação", r.situacao) + detailField("KM", r.km) + detailField("Doc. entregue", r.docEntregue)
+      + detailField("Cliente/Fornecedor", r.cliente) + detailField("CPF/CNPJ", r.clienteDoc) + detailField("Telefone", r.tel)
+      + detailField("Motorista", r.motorista) + detailField("Possui avarias", r.possuiAvarias)
+      + '</div>';
+    if(r.possuiAvarias==="Sim") body += '<p><b>Avarias:</b> '+escapeHtml(r.descAvarias)+'</p>';
+    body += '<h4>Checklist</h4>' + checklistDetailTable(r.checklist);
+    body += '<h4>Fotos</h4>' + photosDetailGrid(r.fotos);
+    body += '<div class="detail-grid" style="margin-top:10px">'+detailField("Nome cliente (assinatura)", r.nomeCliente)+detailField("Nome avaliador Piratruck", r.nomeAvaliador)+'</div>';
+  } else if(r.tag==="manutencao"){
+    body += '<div class="detail-grid">'+detailField("KM entrada", r.km)+detailField("Motivo", r.motivoManutencao)+detailField("Oficina", r.oficina)
+      + detailField("Data chegada", fmtDateBR(r.dataChegada))+detailField("Previsão conclusão", r.previsaoConclusao? fmtDateBR(r.previsaoConclusao):"—")
+      + detailField("Responsável entrega", r.responsavelEntrega)+'</div>';
+    body += '<h4>Checklist de entrada</h4>' + checklistDetailTable(r.checklistEntrada);
+    body += '<h4>Fotos de entrada</h4>' + photosDetailGrid(r.fotosEntrada);
+    if(r.status==="concluido"){
+      body += '<div class="banner banner-ok" style="margin-top:14px">Saída registrada em '+fmtDateBR(r.dataSaida)+'</div>';
+      body += '<div class="detail-grid">'+detailField("KM saída", r.kmSaida)+detailField("Custo total", "R$ "+r.custoTotal)+detailField("Peças trocadas", r.pecasTrocadas)+'</div>';
+      body += '<p><b>Serviços realizados:</b> '+escapeHtml(r.servicosRealizados)+'</p>';
+      body += '<h4>Checklist de saída</h4>' + checklistDetailTable(r.checklistSaida);
+      body += '<h4>Fotos de saída</h4>' + photosDetailGrid(r.fotosSaida);
+    }
+  } else if(r.tag==="empresa"){
+    body += '<div class="detail-grid">'+detailField("Motorista", r.motorista)+detailField("Destino", r.destino)
+      + detailField("Saída", fmtDateTimeBR(r.dataSaida))+detailField("KM saída", r.kmSaida)
+      + detailField("Combustível na saída", r.combustivelSaida)+detailField("Abasteceu (saída)", r.abasteceuSaida + (r.valorAbastSaida? " — R$ "+r.valorAbastSaida:""))
+      + '</div>';
+    body += '<h4>Checklist rápido de saída</h4>' + checklistDetailTable(r.checklistSaida);
+    body += '<h4>Foto de saída</h4>' + photosDetailGrid(r.fotosSaida);
+    if(r.status==="concluido"){
+      body += '<div class="banner banner-ok" style="margin-top:14px">Devolução registrada em '+fmtDateTimeBR(r.dataRetorno)+'</div>';
+      body += '<div class="detail-grid">'+detailField("KM chegada", r.kmChegada)+detailField("KM rodado", r.kmRodado)
+        + detailField("Combustível na chegada", r.combustivelChegada)+detailField("Abasteceu (retorno)", r.abasteceuChegada + (r.valorAbastChegada? " — R$ "+r.valorAbastChegada:""))+'</div>';
+      body += '<p><b>Observações do retorno:</b> '+escapeHtml(r.obsRetorno)+'</p>';
+      body += '<h4>Foto de chegada</h4>' + photosDetailGrid(r.fotosChegada);
+    }
+  } else if(r.tag==="prevenda"){
+    body += '<div class="detail-grid">'+detailField("KM", r.km)+detailField("Oficina/Mecânico", r.oficina)
+      + detailField("Início", fmtDateBR(r.dataInicio))+detailField("Conclusão", fmtDateBR(r.dataConclusao))
+      + detailField("Custo total", "R$ "+r.custoTotal)+detailField("Peças trocadas", r.pecasTrocadas)
+      + detailField("Aprovado p/ venda", r.aprovadoVenda)+'</div>';
+    body += '<p><b>Serviços realizados:</b> '+escapeHtml(r.servicosRealizados)+'</p>';
+    if(r.aprovadoVenda==="Não") body += '<p><b>Motivo/pendências:</b> '+escapeHtml(r.motivoReprova)+'</p>';
+    body += '<h4>Checklist final de inspeção</h4>' + checklistDetailTable(r.checklist);
+    body += '<h4>Fotos ANTES</h4>' + photosDetailGrid(r.fotosAntes);
+    body += '<h4>Fotos DEPOIS</h4>' + photosDetailGrid(r.fotosDepois);
+  }
+
+  body += '<h4>Histórico de atualizações deste veículo</h4><div class="timeline">'
+    + (r.historico||[]).map(function(h){
+        return '<div class="timeline-entry"><div class="te-head">'+escapeHtml(h.autor)+'</div><div class="te-date">'+fmtDateTimeBR(h.data)+'</div><div class="te-body">'+escapeHtml(h.acao)+(h.detalhes? " — "+h.detalhes:"")+'</div>'+(h.fotos? photosDetailGrid(h.fotos):"")+'</div>';
+      }).join("")
+    + '</div>';
+
+  let actionBtns = '<button class="btn" onclick="openAppendForm(\''+r.id+'\')">➕ Adicionar informação</button>';
+  if(r.tag==="manutencao" && r.status==="aberto") actionBtns += '<button class="btn btn-primary" onclick="openManutSaidaForm(\''+r.id+'\')">🔧 Registrar saída da manutenção</button>';
+  if(r.tag==="empresa" && r.status==="em_uso") actionBtns += '<button class="btn btn-primary" onclick="openEmpresaDevolucaoForm(\''+r.id+'\')">🚚 Registrar devolução</button>';
+  actionBtns += '<button class="btn" onclick="printRecordById(\''+r.id+'\')">🖨️ Exportar PDF</button>';
+  actionBtns += '<button class="btn btn-danger" onclick="deleteRecord(\''+r.id+'\')">🗑️ Excluir</button>';
+
+  const html = '<div class="modal-head"><h3>'+escapeHtml(recordTitle(r))+'</h3><button class="modal-close" onclick="closeModal()">✕</button></div>'
+    + '<div class="modal-body">'+body+'</div>'
+    + '<div class="modal-foot">'+actionBtns+'</div>';
+  openModal(html);
+}
+
+/* ================= Exportação / impressão (PDF via navegador) ================= */
+function buildPrintPage(r){
+  let rows = '';
+  const cl = r.checklist || r.checklistEntrada || [];
+  const clRows = function(items){ return (items||[]).map(function(x){ return '<tr><td>'+escapeHtml(x.item)+'</td><td>'+escapeHtml(x.status||"—")+'</td><td>'+escapeHtml(x.obs||"")+'</td></tr>'; }).join(""); };
+  const photos = function(list, label){
+    if(!list || !list.length) return "";
+    return '<p><b>'+label+'</b></p><div class="print-photos">'+list.map(function(p){ return '<img src="'+p.dataUrl+'">'; }).join("")+'</div>';
+  };
+  let meta = '<div class="print-meta">'
+    + '<div><b>Categoria</b>'+TAG_LABEL[r.tag]+'</div>'
+    + '<div><b>Operador</b>'+escapeHtml(r.criadoPor||"—")+'</div>'
+    + '<div><b>Criado em</b>'+fmtDateTimeBR(r.criadoEm)+'</div>'
+    + (r.tipoVeiculoLabel? '<div><b>Tipo</b>'+escapeHtml(r.tipoVeiculoLabel)+'</div>':'')
+    + (r.placa? '<div><b>Placa</b>'+escapeHtml(r.placa)+'</div>':'')
+    + (r.chassi? '<div><b>Chassi</b>'+escapeHtml(r.chassi)+'</div>':'')
+    + (r.marca? '<div><b>Marca</b>'+escapeHtml(r.marca)+'</div>':'')
+    + (r.modelo? '<div><b>Modelo</b>'+escapeHtml(r.modelo)+'</div>':'')
+    + (r.km? '<div><b>KM</b>'+escapeHtml(r.km)+'</div>':'')
+    + '</div>';
+
+  let extra = "";
+  if(r.tag==="compra"){
+    extra += '<table><thead><tr><th>Item</th><th>Status</th><th>Obs.</th></tr></thead><tbody>'+clRows(r.checklist)+'</tbody></table>';
+    extra += photos(r.fotos, "Fotos");
+    extra += '<div class="sig-row"><div>'+escapeHtml(r.nomeCliente||"")+'<br>Cliente/Fornecedor</div><div>'+escapeHtml(r.nomeAvaliador||"")+'<br>Avaliador Piratruck</div></div>';
+  } else if(r.tag==="manutencao"){
+    extra += '<p><b>Entrada — '+fmtDateBR(r.dataChegada)+'</b> | Motivo: '+escapeHtml(r.motivoManutencao||"")+' | Oficina: '+escapeHtml(r.oficina||"")+'</p>';
+    extra += '<table><thead><tr><th>Item</th><th>Status</th><th>Obs.</th></tr></thead><tbody>'+clRows(r.checklistEntrada)+'</tbody></table>';
+    extra += photos(r.fotosEntrada, "Fotos de entrada");
+    if(r.status==="concluido"){
+      extra += '<p><b>Saída — '+fmtDateBR(r.dataSaida)+'</b> | Custo: R$ '+escapeHtml(r.custoTotal||"")+' | Peças: '+escapeHtml(r.pecasTrocadas||"")+'</p>';
+      extra += '<p>Serviços realizados: '+escapeHtml(r.servicosRealizados||"")+'</p>';
+      extra += '<table><thead><tr><th>Item</th><th>Status</th><th>Obs.</th></tr></thead><tbody>'+clRows(r.checklistSaida)+'</tbody></table>';
+      extra += photos(r.fotosSaida, "Fotos de saída");
+    }
+  } else if(r.tag==="empresa"){
+    extra += '<p><b>Retirada</b> — '+fmtDateTimeBR(r.dataSaida)+' | Motorista: '+escapeHtml(r.motorista||"")+' | Destino: '+escapeHtml(r.destino||"")+' | KM saída: '+escapeHtml(r.kmSaida||"")+' | Combustível: '+escapeHtml(r.combustivelSaida||"")+' | Abasteceu: '+escapeHtml(r.abasteceuSaida||"")+'</p>';
+    extra += photos(r.fotosSaida, "Foto de saída");
+    if(r.status==="concluido"){
+      extra += '<p><b>Devolução</b> — '+fmtDateTimeBR(r.dataRetorno)+' | KM chegada: '+escapeHtml(r.kmChegada||"")+' (rodou '+escapeHtml(String(r.kmRodado||""))+' km) | Combustível: '+escapeHtml(r.combustivelChegada||"")+' | Abasteceu: '+escapeHtml(r.abasteceuChegada||"")+'</p>';
+      extra += '<p>Observações: '+escapeHtml(r.obsRetorno||"")+'</p>';
+      extra += photos(r.fotosChegada, "Foto de chegada");
+    }
+  } else if(r.tag==="prevenda"){
+    extra += '<p><b>Serviço</b> ('+fmtDateBR(r.dataInicio)+' a '+fmtDateBR(r.dataConclusao)+') | Oficina: '+escapeHtml(r.oficina||"")+' | Custo: R$ '+escapeHtml(r.custoTotal||"")+'</p>';
+    extra += '<p>Serviços realizados: '+escapeHtml(r.servicosRealizados||"")+' | Peças trocadas: '+escapeHtml(r.pecasTrocadas||"")+'</p>';
+    extra += '<p><b>Aprovado para venda:</b> '+escapeHtml(r.aprovadoVenda||"")+(r.motivoReprova? " — "+escapeHtml(r.motivoReprova):"")+'</p>';
+    extra += '<table><thead><tr><th>Item</th><th>Status</th><th>Obs.</th></tr></thead><tbody>'+clRows(r.checklist)+'</tbody></table>';
+    extra += photos(r.fotosAntes, "Fotos ANTES"); extra += photos(r.fotosDepois, "Fotos DEPOIS");
+  }
+  const hist = (r.historico||[]).map(function(h){ return '<li>'+fmtDateTimeBR(h.data)+' — <b>'+escapeHtml(h.autor)+'</b>: '+escapeHtml(h.acao)+(h.detalhes? " ("+h.detalhes+")":"")+'</li>'; }).join("");
+
+  return '<div class="print-page"><h1>PIRATRUCK — '+TAG_LABEL[r.tag]+' — '+escapeHtml(recordTitle(r))+'</h1>'
+    + meta + extra
+    + '<p><b>Histórico de atualizações:</b></p><ul>'+hist+'</ul>'
+    + '</div>';
+}
+function printRecordById(recordId){
+  const r = state.records.find(function(x){ return x.id===recordId; });
+  if(!r) return;
+  byId("print-area").innerHTML = buildPrintPage(r);
+  setTimeout(function(){ window.print(); }, 60);
+}
+function exportDayPdf(day){
+  const f = getHistoricoFilters();
+  const recs = state.records.filter(function(r){ return recordPrimaryDate(r)===day && matchesFilters(r,f); });
+  byId("print-area").innerHTML = recs.map(buildPrintPage).join("");
+  setTimeout(function(){ window.print(); }, 60);
+}
+
+/* ================= Export / Import JSON (backup manual) ================= */
+function exportJson(){
+  const blob = new Blob([JSON.stringify({ records: state.records, exportadoEm: nowLocalISO() }, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "checklist-veiculos-backup-"+todayISO()+".json";
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function importJsonFile(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      const list = Array.isArray(data.records) ? data.records : Array.isArray(data) ? data : null;
+      if(!list) throw new Error("formato inválido");
+      let added=0, updated=0;
+      list.forEach(function(r){
+        const idx = state.records.findIndex(function(x){ return x.id===r.id; });
+        if(idx>=0){ state.records[idx]=r; updated++; } else { state.records.push(r); added++; }
+      });
+      renderHistorico();
+      showToast("Importado: "+added+" novo(s), "+updated+" atualizado(s).","ok");
+    }catch(err){ showToast("Arquivo inválido para importação.","err"); }
+  };
+  reader.readAsText(file);
+}
+
+/* ================= FIREBASE (sincronização online entre aparelhos) ================= */
+function loadFirebaseConfigFromUrl(){
+  const h = location.hash || "";
+  const m = h.match(/cfg=([^&]+)/);
+  if(m){
+    try{
+      const json = decodeURIComponent(escape(atob(decodeURIComponent(m[1]))));
+      const cfg = JSON.parse(json);
+      connectFirebase(cfg, true);
+    }catch(e){ console.warn("Config Firebase na URL inválida", e); }
+  }
+}
+function setOnlineStatus(on){
+  state.online = on;
+  const dot = byId("status-dot");
+  const txt = byId("status-text");
+  if(dot) dot.className = "dot " + (on ? "dot-green" : "dot-red");
+  if(txt) txt.textContent = on ? "Online — sincronizado" : "Modo local (temporário)";
+}
+function connectFirebase(cfg, silent){
+  if(typeof firebase === "undefined"){
+    showToast("Não foi possível carregar a biblioteca do Firebase (verifique a internet).","err");
+    return;
+  }
+  try{
+    if(fbApp){ try{ fbApp.delete(); }catch(e){} }
+    fbApp = firebase.initializeApp(cfg, "piratruck-"+Date.now());
+    fbDb = fbApp.firestore();
+    if(fbUnsub) fbUnsub();
+    fbUnsub = fbDb.collection("checklist_veiculos").onSnapshot(function(snap){
+      state.records = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+      setOnlineStatus(true);
+      renderHistorico();
+    }, function(err){
+      showToast("Erro de conexão com o Firebase: "+err.message,"err");
+      setOnlineStatus(false);
+    });
+    state.fbConfig = cfg;
+    const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(cfg)))));
+    const newUrl = location.pathname + location.search + "#cfg=" + encoded;
+    history.replaceState(null, "", newUrl);
+    const linkInput = byId("share-link-input");
+    if(linkInput) linkInput.value = location.href;
+    if(!silent) showToast("Conectado ao Firebase! Copie/salve o link para acessar já conectado da próxima vez.","ok");
+    renderSettingsContent();
+  }catch(e){
+    showToast("Erro ao conectar: "+e.message,"err");
+  }
+}
+function disconnectFirebase(){
+  if(fbUnsub) fbUnsub();
+  fbUnsub = null; fbDb = null; fbApp = null; state.fbConfig = null;
+  history.replaceState(null, "", location.pathname + location.search);
+  setOnlineStatus(false);
+  showToast("Desconectado. Voltando ao modo local.","ok");
+  renderSettingsContent();
+  renderHistorico();
+}
+function copyShareLink(){
+  const input = byId("share-link-input");
+  if(!input || !input.value){ showToast("Conecte-se ao Firebase primeiro.","err"); return; }
+  input.select();
+  try{ document.execCommand("copy"); showToast("Link copiado!","ok"); }
+  catch(e){ navigator.clipboard && navigator.clipboard.writeText(input.value).then(function(){ showToast("Link copiado!","ok"); }); }
+}
+function handleFirebaseConnectForm(){
+  const raw = byId("fb-config-input").value.trim();
+  if(!raw){ showToast("Cole a configuração do Firebase (firebaseConfig).","err"); return; }
+  let cfg = parseFirebaseConfigText(raw);
+  if(!cfg){
+    showToast("Não consegui interpretar a configuração colada. Cole exatamente o objeto firebaseConfig.","err");
+    return;
+  }
+  if(!cfg.apiKey || !cfg.projectId){ showToast("Configuração incompleta — faltam campos (apiKey/projectId).","err"); return; }
+  connectFirebase(cfg, false);
+}
+
+/* ================= Configurações (Settings tab) ================= */
+function renderSettingsContent(){
+  const rulesCode = "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /checklist_veiculos/{doc} {\n      allow read, write: if true; // simples para começar — restrinja depois se quiser mais segurança\n    }\n  }\n}";
+  byId("panel-config").innerHTML =
+    '<div class="card">'
+    + '<h2>🌐 Sincronização online (Firebase) <span class="badge">'+(fbDb?'Conectado':'Modo local')+'</span></h2>'
+    + '<p class="hint">Este painel é um arquivo único, sem servidor próprio. Para os dados (com fotos) ficarem <b>acessíveis automaticamente de qualquer computador/celular</b>, ele se conecta a um banco de dados gratuito do Google chamado <b>Firebase Firestore</b>. Leva uns 10 minutos para configurar, uma única vez.</p>'
+    + (fbDb ?
+        '<div class="banner banner-ok">🟢 Conectado! Todos os aparelhos que abrirem o link salvo abaixo verão os mesmos dados em tempo real.</div>'
+        + '<div class="link-box"><input type="text" id="share-link-input" readonly value="'+escapeAttr(location.href)+'"><button class="btn btn-sm" onclick="copyShareLink()">📋 Copiar link</button></div>'
+        + '<p class="hint">Salve/favorite esse link em cada computador — ele já abre conectado, sem precisar colar a configuração de novo.</p>'
+        + '<div class="btn-row"><button class="btn btn-danger btn-sm" onclick="disconnectFirebase()">Desconectar</button></div>'
+      :
+        '<ol class="steps">'
+        + '<li>Acesse <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a>, entre com sua conta Google e clique em <b>"Criar projeto"</b> (grátis, sem cartão).</li>'
+        + '<li>Dentro do projeto, clique no ícone <b>&lt;/&gt; (Web)</b> para criar um "app da Web", dê um nome (ex: painel-veiculos) e clique em registrar. <i>Não</i> precisa marcar Hosting.</li>'
+        + '<li>O Firebase vai te mostrar um bloco de código com <code>const firebaseConfig = {...}</code>. Copie esse bloco inteiro.</li>'
+        + '<li>No menu lateral, vá em <b>Compilação → Firestore Database → Criar banco de dados</b>. Escolha <b>"Iniciar em modo de teste"</b> (ou modo produção + colar a regra de segurança abaixo em Regras).</li>'
+        + '<li>Cole o bloco copiado no campo abaixo e clique em <b>Conectar</b>.</li>'
+        + '</ol>'
+        + '<div class="field"><label>Cole aqui o firebaseConfig copiado do console</label>'
+          + '<textarea id="fb-config-input" placeholder=\'const firebaseConfig = { apiKey: "...", authDomain: "...", projectId: "...", ... };\' style="min-height:110px; font-family:Consolas,monospace; font-size:12px"></textarea></div>'
+        + '<div class="btn-row"><button class="btn btn-primary" onclick="handleFirebaseConnectForm()">🔌 Conectar</button></div>'
+        + '<div class="section-title">Regra de segurança recomendada para o Firestore (cole em "Regras")</div>'
+        + '<pre class="code-block">'+escapeHtml(rulesCode)+'</pre>'
+        + '<p class="hint">⚠️ Essa regra deixa o banco aberto para leitura/escrita por qualquer pessoa com o link — simples para começar rápido. Se quiser mais segurança depois (senha/login), me chame de novo nesta conversa que ajusto.</p>'
+      )
+    + '</div>'
+
+    + '<div class="card">'
+    + '<h2>🤖 Assistente Claude embutido <span class="badge">'+(state.claudeApiKey?'Configurado':'Não configurado')+'</span></h2>'
+    + '<p class="hint">Ative um assistente de IA (Claude, da Anthropic) dentro do painel para tirar dúvidas de uso e sugerir ajustes. Ele usa a <b>sua própria chave de API</b> da Anthropic — por segurança, a chave fica só na memória desta aba (não é salva em nenhum lugar) e precisa ser colada de novo se você fechar e reabrir o painel.</p>'
+    + '<ol class="steps">'
+      + '<li>Crie uma conta/chave em <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a> (Settings → API Keys → Create Key).</li>'
+      + '<li>Cole a chave abaixo. Opcionalmente ajuste o nome do modelo (veja os IDs atuais em <a href="https://docs.claude.com/en/docs/about-claude/models" target="_blank">docs.claude.com</a>).</li>'
+    + '</ol>'
+    + '<div class="grid cols-2">'
+      + fieldWrap("Chave de API da Anthropic", false, textInput("claude-api-key",{type:"password", placeholder:"sk-ant-...", value: state.claudeApiKey||""}))
+      + fieldWrap("Modelo", false, textInput("claude-model",{value: state.claudeModel||"claude-sonnet-4-5"}))
+    + '</div>'
+    + '<div class="btn-row"><button class="btn btn-primary" onclick="saveClaudeSettings()">💾 Salvar (só nesta sessão)</button></div>'
+    + '</div>'
+
+    + '<div class="card">'
+    + '<h2>ℹ️ Sobre este painel</h2>'
+    + '<p class="hint">Os itens de checklist de cada tipo de veículo/implemento foram extraídos do arquivo Excel enviado, mantendo a mesma organização por tipo (Carro, Caminhonete, Leves, Pesados, Basculante, Baú, Granel, Sider, Tanque, Tora, 4º Eixo, Moto, Retroescavadeira, Bobcat).</p>'
+    + '</div>';
+}
+function saveClaudeSettings(){
+  state.claudeApiKey = byId("claude-api-key").value.trim();
+  state.claudeModel = byId("claude-model").value.trim() || "claude-sonnet-4-5";
+  showToast("Configuração da IA salva para esta sessão.","ok");
+  renderSettingsContent();
+}
+
+/* ================= Assistente Claude embutido (chat de ajuda) ================= */
+const APP_SYSTEM_PROMPT = "Você é um assistente dentro do 'Painel de Checklist de Veículos' da Piratruck. "
+  + "O painel tem 4 abas de preenchimento: (1) Compra de Veículos — checklist documental e físico com fotos, tipo de veículo escolhido carrega os itens certos; "
+  + "(2) Manutenção — registra entrada do veículo na oficina com checklist, depois no Histórico dá pra 'Registrar saída da manutenção' pra completar o mesmo registro; "
+  + "(3) Veículos da Empresa — registra retirada (motorista, km saída, combustível) e depois devolução (km chegada, se abasteceu) no mesmo registro; "
+  + "(4) Manutenção Pré-venda — serviços feitos em veículos seminovos antes de vender, com checklist final e fotos antes/depois. "
+  + "Também há a aba Histórico (filtra por data, tipo, operador, e exporta PDF por dia ou por registro) e Configuração (conectar sincronização online via Firebase, e configurar esta própria IA). "
+  + "Todo checklist só salva quando TODOS os campos obrigatórios estiverem preenchidos (em vermelho quando faltam). "
+  + "Cada registro guarda quem preencheu e data; é possível 'Adicionar informação' depois sem apagar o que já foi salvo. "
+  + "Responda em português do Brasil, de forma direta e prática, ajudando o usuário a usar o painel ou entender os campos. "
+  + "Você NÃO consegue alterar o código do painel em tempo real (ele é um arquivo estático) — se o usuário pedir uma mudança de verdade na ferramenta, oriente-o a pedir o ajuste na conversa original com o Claude que criou o painel.";
+
+let chatHistory = [];
+function toggleChatPanel(){
+  const panel = byId("chat-panel");
+  panel.classList.toggle("open");
+}
+function renderChatMessages(){
+  const box = byId("chat-messages");
+  box.innerHTML = chatHistory.map(function(m){
+    const who = m.role==="user" ? "Você" : "Claude";
+    const cls = m.role==="user" ? "chat-msg user" : "chat-msg bot";
+    return '<div class="'+cls+'"><b>'+who+':</b> '+escapeHtml(m.content).replace(/\n/g,"<br>")+'</div>';
+  }).join("") || '<p class="hint">Pergunte algo sobre como usar o painel — ex: "como registro a saída de manutenção?"</p>';
+  box.scrollTop = box.scrollHeight;
+}
+async function sendChatMessage(){
+  const input = byId("chat-input");
+  const text = input.value.trim();
+  if(!text) return;
+  if(!state.claudeApiKey){
+    showToast("Configure sua chave de API do Claude em Configuração primeiro.","err");
+    switchTab("config");
+    toggleChatPanel();
+    return;
+  }
+  chatHistory.push({ role:"user", content:text });
+  input.value = "";
+  renderChatMessages();
+  const thinkingMsg = { role:"assistant", content:"…pensando" };
+  chatHistory.push(thinkingMsg);
+  renderChatMessages();
+  try{
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": state.claudeApiKey,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: state.claudeModel || "claude-sonnet-4-5",
+        max_tokens: 700,
+        system: APP_SYSTEM_PROMPT,
+        messages: chatHistory.filter(function(m){ return m!==thinkingMsg; }).map(function(m){ return { role: m.role==="user"?"user":"assistant", content: m.content }; })
+      })
+    });
+    const data = await resp.json();
+    chatHistory.pop();
+    if(!resp.ok){
+      chatHistory.push({ role:"assistant", content:"Erro: "+(data.error && data.error.message ? data.error.message : resp.statusText) });
+    } else {
+      const textOut = (data.content||[]).map(function(c){ return c.text||""; }).join("");
+      chatHistory.push({ role:"assistant", content: textOut || "(sem resposta)" });
+    }
+  }catch(e){
+    chatHistory.pop();
+    chatHistory.push({ role:"assistant", content:"Não consegui falar com a API (verifique internet/chave). Detalhe: "+e.message });
+  }
+  renderChatMessages();
+}
+function chatInputKeydown(ev){
+  if(ev.key==="Enter" && !ev.shiftKey){ ev.preventDefault(); sendChatMessage(); }
+}
+
+</script>
+</body>
+</html>
