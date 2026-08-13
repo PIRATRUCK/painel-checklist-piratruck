@@ -358,6 +358,7 @@ input.err,select.err,textarea.err{border-color:var(--bad); background:var(--bad-
 <div id="print-area"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
 /* =========================================================================
@@ -392,35 +393,56 @@ function parseFirebaseConfigText(raw){
 }
 
 /* Tela de login simples da equipe (barreira de acesso) */
-function piratruckLoginGate(){
-  try{ if(sessionStorage.getItem("pt_auth") === "1") return; }catch(e){}
-  const ov = document.createElement("div");
-  ov.id = "pt-login-overlay";
-  ov.style.cssText = "position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);display:flex;align-items:center;justify-content:center;padding:20px";
-  ov.innerHTML = '<div style="background:#fff;border-radius:14px;max-width:340px;width:100%;padding:26px 22px;box-shadow:0 10px 30px rgba(0,0,0,.3);text-align:center;font-family:Segoe UI,system-ui,sans-serif">'
-    + '<div style="font-size:34px;margin-bottom:6px">🚚</div>'
-    + '<h2 style="margin:0 0 4px;font-size:18px;color:#0f172a">Painel de Checklist</h2>'
-    + '<div style="font-size:12.5px;color:#64748b;margin-bottom:16px">PIRATRUCK — acesso restrito da equipe</div>'
-    + '<input id="pt-user" type="text" placeholder="Login" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:11px;font-size:14px;margin-bottom:10px">'
-    + '<input id="pt-pass" type="password" placeholder="Senha da equipe" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:11px;font-size:14px;margin-bottom:10px" onkeydown="if(event.key===\'Enter\')ptTryLogin()">'
-    + '<div id="pt-pass-err" style="display:none;color:#dc2626;font-size:12px;margin-bottom:8px">Login ou senha incorretos.</div>'
-    + '<button onclick="ptTryLogin()" style="width:100%;background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:11px;font-weight:700;font-size:14px;cursor:pointer">Entrar</button>'
-    + '</div>';
-  document.body.appendChild(ov);
-  setTimeout(function(){ var el = document.getElementById("pt-pass"); if(el) el.focus(); }, 60);
+var fbAuth = null;
+function piratruckLoginGate(){ ptAuthBoot(); }
+function ptAuthBoot(){
+  if(typeof firebase === "undefined"){ showToast("Não carregou o Firebase (verifique a internet).","err"); return; }
+  try{ if(!firebase.apps.length){ firebase.initializeApp(EMBEDDED_FIREBASE_CONFIG); } }catch(e){}
+  try{ fbAuth = firebase.auth(); }catch(e){ showToast("Auth indisponível: "+e.message,"err"); return; }
+  fbAuth.onAuthStateChanged(function(user){
+    if(user){
+      ptHideLogin();
+      var cu = byId("current-user-input"); if(cu && !cu.value){ cu.value = (user.email||"").split("@")[0]; }
+      connectFirebase(EMBEDDED_FIREBASE_CONFIG, true);
+    } else {
+      ptShowLoginAuth();
+    }
+  });
 }
-function ptTryLogin(){
-  const el = document.getElementById("pt-pass");
-  const uel = document.getElementById("pt-user");
-  if(uel && uel.value.trim().toUpperCase() === TEAM_USER && el && el.value === TEAM_PASSWORD){
-    try{ sessionStorage.setItem("pt_auth", "1"); }catch(e){}
-    const ov = document.getElementById("pt-login-overlay");
-    if(ov) ov.remove();
-  } else {
-    const err = document.getElementById("pt-pass-err");
-    if(err) err.style.display = "block";
+function ptShowLoginAuth(){
+  var ov = document.getElementById("pt-login-overlay");
+  if(!ov){
+    ov = document.createElement("div"); ov.id = "pt-login-overlay";
+    ov.style.cssText = "position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#1e3a8a,#1d4ed8);display:flex;align-items:center;justify-content:center;padding:20px";
+    ov.innerHTML = '<div style="background:#fff;border-radius:14px;max-width:340px;width:100%;padding:26px 22px;box-shadow:0 10px 30px rgba(0,0,0,.3);text-align:center;font-family:Segoe UI,system-ui,sans-serif">'
+      + '<div style="font-size:34px;margin-bottom:6px">🚚</div>'
+      + '<h2 style="margin:0 0 4px;font-size:18px;color:#0f172a">Painel de Checklist</h2>'
+      + '<div style="font-size:12.5px;color:#64748b;margin-bottom:16px">PIRATRUCK — entre com seu e-mail e senha</div>'
+      + '<input id="pt-user" type="email" placeholder="E-mail" autocomplete="username" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:11px;font-size:14px;margin-bottom:10px">'
+      + '<input id="pt-pass" type="password" placeholder="Senha" autocomplete="current-password" style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:11px;font-size:14px;margin-bottom:10px" onkeydown="if(event.key===\'Enter\')ptTryLogin()">'
+      + '<div id="pt-pass-err" style="display:none;color:#dc2626;font-size:12px;margin-bottom:8px"></div>'
+      + '<button onclick="ptTryLogin()" style="width:100%;background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:11px;font-weight:700;font-size:14px;cursor:pointer">Entrar</button>'
+      + '</div>';
+    document.body.appendChild(ov);
   }
+  ov.style.display = "flex";
+  setTimeout(function(){ var el = document.getElementById("pt-user"); if(el) el.focus(); }, 60);
 }
+function ptHideLogin(){ var ov = document.getElementById("pt-login-overlay"); if(ov) ov.style.display = "none"; }
+function ptTryLogin(){
+  if(!fbAuth){ ptAuthBoot(); return; }
+  var email = (document.getElementById("pt-user")||{}).value || "";
+  var pass = (document.getElementById("pt-pass")||{}).value || "";
+  var err = document.getElementById("pt-pass-err");
+  fbAuth.signInWithEmailAndPassword(email.trim(), pass).catch(function(e){
+    var msg = "Login ou senha incorretos.";
+    if(e && e.code === "auth/invalid-email") msg = "E-mail inválido.";
+    else if(e && e.code === "auth/too-many-requests") msg = "Muitas tentativas. Aguarde um pouco.";
+    else if(e && e.code === "auth/network-request-failed") msg = "Sem conexão com a internet.";
+    if(err){ err.textContent = msg; err.style.display = "block"; }
+  });
+}
+function ptLogout(){ if(fbAuth) fbAuth.signOut(); }
 
 
 const VEHICLE_TYPES = {"carro": {"label": "Carro", "items": ["PNEUS EM ORDEM?", "ESTEPE EM ORDEM?", "RODAS EM ORDEM?", "KIT PARA TROCA DE PNEUS - MACACO, TRIANGULO, CHAVE DE RODA?", "FREIOS - DE PÉ E DE MÃO FUNCIONANDO?", "LUZ DE LANTERNAS E FREIO TRASEIRAS FUNCIONANDO?", "FAROIS ALTO E BAIXO FUNCIONANDO?", "LUZ DE RÉ FUNCIONANDO?", "SETAS ESQUERDA E DIREITA FUNCIONANDO?", "LIMPADOR DE PARÁ-BRISA, BORRACHAS E ESGUICHO DE ÁGUA?", "BUZINA FUNCIONANDO?", "VIDROS ELÉTRICOS FUNCIONANDO?", "RETROVISORES ELÉTRICOS FUNCIONANDO?", "MOSTRADORES E BOTÕES DO PAINEL FUNCIONANDO?", "RADIO MP3 / CD?", "APRESENTANDO VAZAMENTO DE ÁGUA, COMBUSTÍVEL OU ÓLEO?", "NÍVEL ADEQUADO DE ÓLEO DO MOTOR?", "NÍVEL ADEQUADO DE ÓLEO DE FREIO?", "NÍVEL ADEQUADO DA ÁGUA DO RADIADOR?", "TROCA DE ÓLEO E FILTRO, VER NA ETIQUETA, ANOTAR O PRAZO", "PORTAS E MAÇANETAS FUNCIONANDO ADEQUADAMENTE?", "CINTO DE SEGURANÇA FUNCIONANDO ADEQUADAMENTE?", "EXTINTOR EM ORDEM? ANOTAR DATA DE VALIDADE", "BANCOS E TAPETES EM ORDEM?", "NÚMERO DO CHASSI, CONFERE?", "NÚMERO DO CHASSI NOS VIDROS, CONFERE COM O DOC?", "NÚMERO DO MOTOR, CONFERE COM O DOC?", "CHAVE RESERVA?", "MANUAL DO PROPRIETARIO?"]}, "caminhonete": {"label": "Caminhonete", "items": ["PNEUS EM ORDEM?", "ESTEPE EM ORDEM?", "RODAS EM ORDEM?", "KIT PARA TROCA DE PNEUS - MACACO, TRIANGULO, CHAVE DE RODA?", "FREIOS - DE PÉ E DE MÃO FUNCIONANDO?", "LUZ DE LANTERNAS E FREIO TRASEIRAS FUNCIONANDO?", "FAROIS ALTO E BAIXO FUNCIONANDO?", "LUZ DE RÉ FUNCIONANDO?", "SETAS ESQUERDA E DIREITA FUNCIONANDO?", "LIMPADOR DE PARÁ-BRISA, BORRACHAS E ESGUICHO DE ÁGUA?", "BUZINA FUNCIONANDO?", "VIDROS ELÉTRICOS FUNCIONANDO?", "RETROVISORES ELÉTRICOS FUNCIONANDO?", "MOSTRADORES E BOTÕES DO PAINEL FUNCIONANDO?", "RADIO MP3 / CD?", "APRESENTANDO VAZAMENTO DE ÁGUA, COMBUSTÍVEL OU ÓLEO?", "NÍVEL ADEQUADO DE ÓLEO DO MOTOR?", "NÍVEL ADEQUADO DE ÓLEO DE FREIO?", "NÍVEL ADEQUADO DA ÁGUA DO RADIADOR?", "TROCA DE ÓLEO E FILTRO, VER NA ETIQUETA, ANOTAR O PRAZO", "PORTAS E MAÇANETAS FUNCIONANDO ADEQUADAMENTE?", "CINTO DE SEGURANÇA FUNCIONANDO ADEQUADAMENTE?", "EXTINTOR EM ORDEM? ANOTAR DATA DE VALIDADE", "BANCOS E TAPETES EM ORDEM?", "NÚMERO DO CHASSI, CONFERE?", "NÚMERO DO CHASSI NOS VIDROS, CONFERE COM O DOC?", "NÚMERO DO MOTOR, CONFERE COM O DOC?", "CHAVE RESERVA?", "MANUAL DO PROPRIETARIO?"]}, "leves": {"label": "Veículos Leves (utilitários)", "items": ["PNEUS EM ORDEM?", "ESTEPE EM ORDEM?", "RODAS EM ORDEM?", "KIT PARA TROCA DE PNEUS - MACACO, TRIANGULO, CHAVE DE RODA?", "FREIOS - DE PÉ E DE MÃO FUNCIONANDO?", "LUZ DE LANTERNAS E FREIO TRASEIRAS FUNCIONANDO?", "FAROIS ALTO E BAIXO FUNCIONANDO?", "LUZ DE RÉ E ALARME DE RÉ FUNCIONANDO?", "SETAS DA ESQUERDA, DA DIREITA E ALERTA FUNCIONANDO?", "LIMPADOR DE PARÁ-BRISA, BORRACHAS E ESGUICHO DE ÁGUA?", "BUZINA FUNCIONANDO?", "VIDROS ELÉTRICOS FUNCIONANDO?", "MOSTRADORES E BOTÕES DO PAINEL FUNCIONANDO?", "RADIO MP3 / CD?", "APRESENTANDO VAZAMENTO DE ÁGUA, COMBUSTÍVEL OU ÓLEO?", "NÍVEL ADEQUADO DE ÓLEO DO MOTOR?", "NÍVEL ADEQUADO DE ÓLEO DE FREIO?", "NÍVEL ADEQUADO DA ÁGUA DO RADIADOR?", "TROCA DE ÓLEO E FILTRO, VER NA ETIQUETA, ANOTAR O PRAZO", "PORTAS E MAÇANETAS FUNCIONANDO ADEQUADAMENTE?", "RETROVISORES EM BOM ESTADO E FUNCIONANDO?", "TAMPA DO COMBUSTÍVEL DO TANQUE ESTÁ EM ORDEM?", "CINTO DE SEGURANÇA FUNCIONANDO ADEQUADAMENTE?", "EXTINTOR EM ORDEM? ANOTAR DATA DE VALIDADE", "BANCOS E TAPETES EM ORDEM?", "NÚMERO DO CHASSI, CONFERE?", "NÚMERO DO CHASSI NOS VIDROS, CONFERE COM O DOC?", "NÚMERO DO MOTOR, CONFERE COM O DOC?", "SELO DA CABINE - FRONTAL, LATERAL E ABAIXO CONFERE COM O DOC?", "PLAQUETA DE CABINE?", "CHAVE RESERVA?", "MANUAL DO PROPRIETARIO?"]}, "pesados": {"label": "Veículos Pesados (caminhão)", "items": ["PNEUS EM ORDEM?", "ESTEPE EM ORDEM?", "RODAS EM ORDEM?", "KIT PARA TROCA DE PNEUS - MACACO, TRIANGULO, CHAVE DE RODA?", "FREIOS - DE PÉ E DE MÃO FUNCIONANDO?", "LUZ DE LANTERNAS E FREIO TRASEIRAS FUNCIONANDO?", "FAROIS ALTO E BAIXO FUNCIONANDO?", "LUZ DE RÉ E ALARME DE RÉ FUNCIONANDO?", "SETAS DA ESQUERDA, DA DIREITA E ALERTA FUNCIONANDO?", "LIMPADOR DE PARÁ-BRISA, BORRACHAS E ESGUICHO DE ÁGUA?", "BUZINA FUNCIONANDO?", "VIDROS ELÉTRICOS FUNCIONANDO?", "MOSTRADORES E BOTÕES DO PAINEL FUNCIONANDO?", "RADIO MP3 / CD?", "APRESENTANDO VAZAMENTO DE ÁGUA, COMBUSTÍVEL OU ÓLEO?", "NÍVEL ADEQUADO DE ÓLEO DO MOTOR?", "NÍVEL ADEQUADO DE ÓLEO DE FREIO?", "NÍVEL ADEQUADO DA ÁGUA DO RADIADOR?", "TROCA DE ÓLEO E FILTRO, VER NA ETIQUETA, ANOTAR O PRAZO", "PORTAS E MAÇANETAS FUNCIONANDO ADEQUADAMENTE?", "RETROVISORES EM BOM ESTADO E FUNCIONANDO?", "TAMPA DO COMBUSTÍVEL DO TANQUE ESTÁ EM ORDEM?", "CINTO DE SEGURANÇA FUNCIONANDO ADEQUADAMENTE?", "EXTINTOR EM ORDEM? ANOTAR DATA DE VALIDADE", "BANCOS E TAPETES EM ORDEM?", "NÚMERO DO CHASSI, CONFERE?", "NÚMERO DO CHASSI NOS VIDROS, CONFERE COM O DOC?", "NÚMERO DO MOTOR, CONFERE COM O DOC?", "SELO DA CABINE - FRONTAL, LATERAL E ABAIXO CONFERE COM O DOC?", "PLAQUETA DE CABINE?", "CHAVE RESERVA?", "MANUAL DO PROPRIETARIO?"]}, "basculante": {"label": "Implemento Basculante", "items": ["PNEUS EM ORDEM?", "RODAS EM ORDEM?", "ESTEPE EM ORDEM?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "LATERAIS", "TAMPA TRASEIRA", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? ESTADO?", "CAIXA COZINHA", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "ARCO DA LONA E VINI LONA", "ARCO DO FUERO", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA", "NÚMERO DO CHASSI CONFERE COM O DOC?", "DADOS TECNICOS", "QUAL O COMPRIMENTO/LARGURA E ALTURA", "TIPO DE ASSOALHO", "N° DE EIXOS"]}, "bau": {"label": "Implemento Baú", "items": ["PNEUS EM ORDEM?", "RODAS EM ORDEM?", "ESTEPE EM ORDEM?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "LATERAIS", "PORTA LATERAL", "PORTA TRASEIRA", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? ESTADO?", "CAIXA COZINHA", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "RIPAMENTO INTERNO", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA", "NÚMERO DO CHASSI CONFERE COM O DOC?", "DADOS TECNICOS", "QUAL O COMPRIMENTO/LARGURA E ALTURA", "TIPO DE ASSOALHO", "N° DE EIXOS"]}, "granel": {"label": "Implemento Granel", "items": ["PNEUS EM ORDEM?", "RODAS EM ORDEM?", "ESTEPE EM ORDEM?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "TAMPAS LATERAIS", "FUEIRO", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? ESTADO?", "CAIXA COZINHA", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "ARCO DA LONA E VINI LONA", "ARCO DO FUERO", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA", "NÚMERO DO CHASSI CONFERE COM O DOC?", "DADOS TECNICOS", "QUAL O COMPRIMENTO/LARGURA E ALTURA", "TIPO DE ASSOALHO", "N° DE EIXOS"]}, "sider": {"label": "Implemento Sider", "items": ["PNEUS EM ORDEM?", "RODAS EM ORDEM?", "ESTEPE EM ORDEM?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "LONAS LATERAIS", "PORTAS TRASEIRA", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? ESTADO?", "CAIXA COZINHA", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "TRAVESSA CONTENÇÃO", "TRILHO", "COLUNA MOVEL", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA", "NÚMERO DO CHASSI CONFERE COM O DOC?", "DADOS TECNICOS", "QUAL O COMPRIMENTO/LARGURA E ALTURA", "TIPO DE ASSOALHO", "N° DE EIXOS"]}, "tanque": {"label": "Implemento Tanque", "items": ["PNEUS E CONDIÇÕES?", "RODAS E CONDIÇÕES?", "ESTEPE E CONDIÇÕES?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "LATERAIS", "TRASEIRA", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? QUAL O ESTADO?", "EXTINTORES", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA", "DADOS TECNICOS", "QUAL O COMPRIMENTO/LARGURA E ALTURA", "N° DE EIXOS"]}, "tora": {"label": "Implemento Tora", "items": ["PNEUS E CONDIÇÕES?", "RODAS E CONDIÇÕES?", "ESTEPE E CONDIÇÕES?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "LATERAIS", "PORTA LATERAL", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? QUAL O ESTADO?", "CAIXA COZINHA", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "PORTAS TRASEIRA", "RIPAMENTO INTERNO", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA"]}, "eixo4": {"label": "Semirreboque Graneleira 4º Eixo", "items": ["PNEUS E CONDIÇÕES?", "RODAS E CONDIÇÕES?", "ESTEPE E CONDIÇÕES?", "LANTERNA TRASEIRA", "LANTERNA LATERAL", "LANTERNA DIANTEIRA", "TAMPAS LATERAIS", "FUEIRO", "PARABARRO", "PARALAMA", "PARA-CHOQUE", "CAIXA DE FERRAMENTA TEM? QUAL O ESTADO?", "CAIXA COZINHA", "PÉ DE APOIO", "BARRIL/COROTE D'ÁGUA", "ARCO DA LONA E VINI LONA", "ARCO DO FUEIRO", "PINTURA GERAL", "SITUAÇÃO DO CHASSI? SEM TRINCA OU AVARIA", "ESTADO DE LIMPEZA", "SUSPENSÃO IBERO S400", "DADOS TECNICOS", "QUAL O COMPRIMENTO/LARGURA E ALTURA", "TIPO DE ASSOALHO", "N° DE EIXOS"]}, "moto": {"label": "Moto", "items": ["PNEUS EM BOAS CONDIÇÕES?", "RODAS EM BOM ESTADO?", "APRESENTANDO VAZAMENTO DE ÁGUA, COMBUSTIVEL OU OLEO?", "LUZ DE LANTERNAS E FREIO TRASEIRAS FUNCIONANDO?", "FAROIS ALTO E BAIXO FUNCIONANDO?", "SETAS ESQUERDA E DIREITA FUNCIONANDO?", "NIVEL ADEQUADO DE ÓLEO DO MOTOR?", "CHAVES", "BUZINA FUNCIONANDO", "MOSTRADORES E BOTÕES DO PAINEL FUNCIONANDO?", "NUMERO CHASSI? CONFERE?", "NUMERO MOTOR? ESTÁ PADRAO?", "MANUAL DO PROPRIETARIO", "CHAVE RESERVA"]}, "retroescavadeira": {"label": "Retroescavadeira", "items": ["LUZES DIANTEIRA, FUNDIONANDO?", "LUZES TRASEIRA, FUNCIONANDO?", "LUZ DE RÉ E ALARME FUNCIONANDO?", "ALAVANCA DE DIREÇÃO P/ FRENTE E P/TRÁS, FUNCIONAM?", "ALAVANCA DE DIREÇÃO P/ ESQUERDA E P/DIREITA, FUNCIONAM?", "ALGUM BOTÃO QUEBRADO NO PAINEL?", "AR CONDICIONADO FUNCIONANDO E GELANDO?", "CINTO DE SEGURANÇA FUNCIONANDO?", "TROCA DE OLEO EM DIA, VIDE ETIQUETA?", "PNEUS TRASEIRO E DIANTEIRO EM BOM ESTADO?", "MANGUEIRAS DA LANÇA E HIDRAULICO, EM BOM ESTADO?", "ALGUM VAZAMENTO DE ÓLEO?", "APRESENTA DEFORMAÇÃO OU AVARIA NA LATARIA?", "NIVEL ADEQUADO DE ÓLEO DO MOTOR?", "NIVEL ADEQUADO DE ÓLEO DE HIDRAULICO?", "NIVEL ADEQUANDO DA AGUA DO RADIADOR?", "OPERADOR QUALIFICADO?", "SAINDO COM EQUIPAMENTO?"]}, "bobcat": {"label": "Bobcat", "items": ["LUZES DIANTEIRA, FUNDIONANDO?", "LUZES TRASEIRA, FUNCIONANDO?", "LUZ DE RÉ E ALARME FUNCIONANDO?", "ALAVANCA DE DIREÇÃO P/ FRENTE E P/TRÁS, FUNCIONAM?", "ALAVANCA DE DIREÇÃO P/ ESQUERDA E P/DIREITA, FUNCIONAM?", "ALGUM BOTÃO QUEBRADO NO PAINEL?", "AR CONDICIONADO FUNCIONANDO E GELANDO?", "CINTO DE SEGURANÇA FUNCIONANDO?", "TROCA DE OLEO EM DIA, VIDE ETIQUETA?", "PNEUS TRASEIRO E DIANTEIRO EM BOM ESTADO?", "MANGUEIRAS DA LANÇA E HIDRAULICO, EM BOM ESTADO?", "ALGUM VAZAMENTO DE ÓLEO?", "APRESENTA DEFORMAÇÃO OU AVARIA NA LATARIA?", "NIVEL ADEQUADO DE ÓLEO DO MOTOR?", "NIVEL ADEQUADO DE ÓLEO DE HIDRAULICO?", "NIVEL ADEQUANDO DA AGUA DO RADIADOR?", "OPERADOR QUALIFICADO?", "SAINDO COM EQUIPAMENTO?"]}};
@@ -786,9 +808,7 @@ function requireOneOf(ids){
 
 /* ================= Boot / navegação de abas ================= */
 document.addEventListener("DOMContentLoaded", function(){
-  piratruckLoginGate();
-  loadFirebaseConfigFromUrl();
-  if(!state.fbConfig){ connectFirebase(EMBEDDED_FIREBASE_CONFIG, true); }
+  ptAuthBoot();
   renderCompraTab();
   renderManutencaoTab();
   renderEmpresaTab();
@@ -1773,8 +1793,8 @@ function connectFirebase(cfg, silent){
     return;
   }
   try{
-    if(fbApp){ try{ fbApp.delete(); }catch(e){} }
-    fbApp = firebase.initializeApp(cfg, "piratruck-"+Date.now());
+    if(!firebase.apps.length){ firebase.initializeApp(cfg); }
+    fbApp = firebase.app();
     fbDb = fbApp.firestore();
     if(fbUnsub) fbUnsub();
     fbUnsub = fbDb.collection("checklist_veiculos").onSnapshot(function(snap){
